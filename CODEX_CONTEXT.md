@@ -53,7 +53,7 @@
 ## 운영·DB
 
 - 운영은 집 Windows, chitoolbox.com, loopback 127.0.0.1:3000 + Caddy HTTPS. Tailscale/SSH는 관리 전용. Sites는 사용하지 않는다.
-- 2026-10-29 개편 실행 빌드: 44fc69a. 실행 릴리스: C:/Services/chi-hub-runtime/releases/20261029-133952-290-44fc69a0d77f. 앱/Caddy Running, Trash Ready/최근 결과 0, 127.0.0.1:3000 수신, 후보 13000 종료 확인. source와 실행 빌드 사이의 후속 문서 커밋 차이는 정상이다.
+- 2026-10-29 공통 UI 실행 빌드: 1c79a62. 실행 릴리스: C:/Services/chi-hub-runtime/releases/20261029-161504-685-1c79a62781ac. 앱 Running, Trash Ready 확인. 기존 운영 루트는 보존하고 `/toolbox`를 추가했다. source와 실행 빌드 사이의 후속 배포 기록 문서 커밋 차이는 정상이다.
 - 앱 공개 환경 키: NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY / NEXT_PUBLIC_SITE_URL. 공개 값도 build에 들어가므로 변경 시 재빌드한다.
 - worker 전용 SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY는 서버 보호 파일에만 둔다. NETWORK SERVICE와 앱 LOCAL SERVICE 권한 분리 유지.
 - worker는 서버 소스 scripts/purge-trash.mjs → trash-worker.mjs. 만료 파일 claim → Storage API 삭제 → DB metadata → 빈 만료 폴더 → 만료 메모 정리. 실패 시 재시도하며 SQL로 Storage 바이트를 직접 삭제하지 않는다.
@@ -64,7 +64,7 @@
 
 ## 검증과 남은 제약
 
-- 새 UI 추가 후 구조 경계 122개·타입·lint·단위 15개·dummy production build·확장 HTTP smoke 통과. Edge에서 기존 전체 회귀와 `/toolbox` 4경로×5너비·히스토리·카드 편집/드래그/저장/취소·손상/차단 저장소 검사 통과. 새 UI의 API 요청 0건 확인, PC·모바일 캡처 확인. npm audit 0건은 이전 구조 개편 당시 결과이며 이번에는 의존성을 변경하지 않았다.
+- 새 UI 추가 후 구조 경계 122개·타입·lint·단위 15개·dummy production build·확장 HTTP smoke 통과. Edge에서 기존 전체 회귀와 `/toolbox` 4경로×5너비·히스토리·카드 편집/드래그/저장/취소·손상/차단 저장소 검사 통과. 새 UI의 API 요청 0건 확인, PC·모바일 캡처 확인. 의존성 변경 없이 서버 npm ci에서 취약점 0건 확인.
 - 실제 운영 DB 쓰기 테스트와 실제 계정 로그인은 수행하지 않았다. health는 DB/Auth/Storage 전체 검사가 아니다.
 - 캘린더 수면/집중 날짜는 timestamp 앞 10자를 사용한다. 현지 날짜 변환 문제는 이번 구조 정비와 분리해 후속 확인한다.
 - 메모 200/파일 1000/폴더 5000 조회 상한, 전체 목록 페이지네이션 부족. Supabase 반환 상한도 별도 적용될 수 있다.
@@ -75,7 +75,7 @@
 
 ## 최근 기록
 
-- 2026-10-29 / 공통 UI: `/toolbox` 대시보드·LMS 탭·설정 빈 화면, PC 왼쪽/모바일 하단 탐색, CSS Module 격리, 카드 편집·브라우저 저장, 공통 로딩·오류 상태와 전용 브라우저 검사를 추가했다. 기존 루트·API·DB는 유지한다. docs/UI_FOUNDATION.md에 진입점과 파일 소유권·한계를 기록했다. 작업 시작 시 존재한 미커밋 docs/MVP.md는 그대로 보존했다.
+- 2026-10-29 / 1c79a62: `/toolbox` 대시보드·LMS 탭·설정 빈 화면, PC 왼쪽/모바일 하단 탐색, CSS Module 격리, 카드 편집·브라우저 저장, 공통 로딩·오류 상태와 전용 브라우저 검사를 추가했다. 기존 루트·API·DB는 유지한다. docs/UI_FOUNDATION.md에 진입점과 파일 소유권·한계를 기록했다. Windows 배포 후 새 UI 4경로·login·health 200, 미인증 preferences 401 확인. 작업 시작 시 존재한 미커밋 docs/MVP.md는 그대로 보존했다. origin push 없이 서버 bundle로 전달했다.
 
 - 2026-10-29 / 44fc69a: 기능 중심 구조·개발 검사·문서 체계·의존성 정비, chi-toolbox 이름 및 GitHub 주소 통일. check/단위 12개/build/전체 보호 API smoke/Edge 11화면×5너비 통과. Windows 배포 후 public health/login/manifest/메모·파일·프로필 200, 미인증 설정 GET·PATCH/프로필/메모 휴지통/다운로드 401. 로컬·서버 audit 0건. 후속 문서 커밋까지 source와 양쪽 chi-toolbox-windows.bundle을 동기화하며 앱 재시작은 하지 않는다.
 - 2026-09-29~30: 드래그·즐겨찾기·프로필/설정·학식/카드 UI 배포(565f0a6), 인수인계(3b1036a). 상세 과거 이력은 Git log를 따른다.
