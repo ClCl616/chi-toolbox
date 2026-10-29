@@ -6,7 +6,7 @@
 
 1. AGENTS.md와 이 문서를 끝까지 읽고 git status -sb / git log -7 --oneline을 확인한다. 기존 dirty 변경은 보존한다.
 2. README.md는 설치·검증 시작점, docs/ARCHITECTURE.md는 구조·기능 추가 기준, deploy/windows/README.md는 운영 절차다.
-3. Node 24 LTS >=24.13.0 <25와 npm/Git을 준비하고 npm.cmd ci로 복원한다. 현재 개발 PC는 C:/Projects/chi-hub, Node 24.20.0 / npm 11.19.0이다.
+3. Node 24 LTS >=24.13.0 <25와 npm/Git을 준비하고 npm.cmd ci로 복원한다. 현재 개발 PC 경로는 C:/Projects/chi-toolbox다. 이전 확인 런타임은 Node 24.20.0 / npm 11.19.0이다.
 4. 실제 앱에는 별도 .env.local이 필요하다. 현재 개발 PC에는 없다. 운영 Supabase를 설정하면 로컬 CRUD도 실데이터 변경이다.
 5. SSH/Tailscale 및 chi-server 별칭·인증은 저장소로 복원되지 않는다. 서버의 환경 파일과 worker 키는 이미 준비되어 있으며 재입력하지 않는다.
 
@@ -26,10 +26,12 @@
 - 사용자가 GitHub 이름 변경을 수행했고 연결 API에서 ClCl616/chi-toolbox를 확인했다. 주소는 https://github.com/ClCl616/chi-toolbox.git.
 - origin push는 이번 요청에 포함되지 않는다. 이번 개편은 검증 후 로컬 커밋과 서버 bundle로 전달한다. GitHub clone만으로 최신 개편을 얻을 수 있다고 가정하지 말고 HEAD를 비교한다.
 - 최신 전달 bundle은 chi-toolbox-windows.bundle, 업데이트 bundle은 chi-toolbox-update.bundle을 사용한다. 복원 명령은 Windows README 참조.
-- 현재 열린 로컬 폴더 및 운영 소스/runtime/Caddy/maintenance 경로와 작업 이름은 호환 식별자로 유지한다. production.psd1에 기존 배치를 명시했다. 자동 이동은 실행 중 작업·ACL·active/previous 포인터·인증서에 영향을 주므로 하지 않는다. 새 clone 폴더는 chi-toolbox다.
+- 로컬 폴더는 C:/Projects/chi-toolbox로 이동됐다. 운영 소스/runtime/Caddy/maintenance 경로와 작업 이름은 호환 식별자로 유지한다. production.psd1에 기존 배치를 명시했다. 운영 경로는 자동 이동하지 않는다.
 - 브라우저 chi-hub-* 저장 키·이벤트·drag MIME은 기존 저장 상태와 열린 화면 호환을 위해 유지한다. 과거 migration은 수정하지 않는다.
 
 ## 유지할 제품 결정과 데이터 흐름
+
+아래는 현재 운영 중인 기존 기능의 계약이다. 새 MVP는 LMS 우선 대시보드이며 기존 전체 기능의 재구현을 전제로 하지 않는다. `/toolbox` 공통 UI 단계의 구조와 후속 범위는 docs/UI_FOUNDATION.md를 따른다. 루트 운영 화면은 아직 교체하지 않는다.
 
 - 한국어 개인용 PWA, 9개 기능 및 프로필·설정. 같은 URL에서 820px 기준 PC/모바일 UI를 분리하고 저장 상태를 공유한다. 밝은 배경/검정/라임, C 아이콘 유지.
 - 한 번에 선택 화면 하나만 표시하며 keepMounted로 타이머·메모 상태를 유지한다. 기본 focus, ?view=focus|morning|calendar|notes|study|sleep|workouts|files|meals|profile|settings, 기존 개별 URL redirect와 뒤로 가기 유지.
@@ -62,15 +64,18 @@
 
 ## 검증과 남은 제약
 
-- 구조 경계·타입·lint·단위 12개·dummy production build·확장 HTTP smoke 통과. Edge API mock에서 메모/학습/파일/캘린더/드래그/즐겨찾기/프로필과 11화면×5너비 통과. PC·모바일 캡처 확인. npm audit 0건.
+- 새 UI 추가 후 구조 경계 122개·타입·lint·단위 15개·dummy production build·확장 HTTP smoke 통과. Edge에서 기존 전체 회귀와 `/toolbox` 4경로×5너비·히스토리·카드 편집/드래그/저장/취소·손상/차단 저장소 검사 통과. 새 UI의 API 요청 0건 확인, PC·모바일 캡처 확인. npm audit 0건은 이전 구조 개편 당시 결과이며 이번에는 의존성을 변경하지 않았다.
 - 실제 운영 DB 쓰기 테스트와 실제 계정 로그인은 수행하지 않았다. health는 DB/Auth/Storage 전체 검사가 아니다.
 - 캘린더 수면/집중 날짜는 timestamp 앞 10자를 사용한다. 현지 날짜 변환 문제는 이번 구조 정비와 분리해 후속 확인한다.
 - 메모 200/파일 1000/폴더 5000 조회 상한, 전체 목록 페이지네이션 부족. Supabase 반환 상한도 별도 적용될 수 있다.
 - HTML Drag and Drop 기반이므로 모바일 터치 정렬 보장은 없다. 복잡한 Markdown 정규화, Tiptap 큰 chunk와 일부 CSS override는 남아 있다.
 - 공인 IP/DNS 자동 갱신, 로그·릴리스 보관 정책, 실제 재부팅 후 복구·사용자 로그인·백업 복구는 추가 확인 필요. 임의 재부팅하지 않는다.
-- 현재 진행 중인 구현은 없다. 구조 개편·검증·Windows 배포를 완료했다. GitHub origin push는 하지 않았고 원격 main은 3b1036a로 유지된다. 새 개발자는 최신 서버 bundle로 이 개편을 복원해야 한다.
+- 새 MVP의 공통 UI·빈 화면 구현과 로컬 검증을 완료했다. 현재 운영 빌드는 위 운영 항목을 기준으로 확인한다. GitHub origin push는 하지 않았고 마지막 확인 원격 main은 3b1036a다. 새 개발자는 최신 서버 bundle과 실행 release를 대조한다.
+- 새 화면은 `/toolbox`의 공개 UI이며 mock 데이터·LMS 수집·계정 API 연결은 없다. 카드 설정은 브라우저에만 저장한다. 다음 단계는 LMS 수집기·데이터 계약 검토이며 사용자 지시 전 추가 기능을 구현하지 않는다.
 
 ## 최근 기록
+
+- 2026-10-29 / 공통 UI: `/toolbox` 대시보드·LMS 탭·설정 빈 화면, PC 왼쪽/모바일 하단 탐색, CSS Module 격리, 카드 편집·브라우저 저장, 공통 로딩·오류 상태와 전용 브라우저 검사를 추가했다. 기존 루트·API·DB는 유지한다. docs/UI_FOUNDATION.md에 진입점과 파일 소유권·한계를 기록했다. 작업 시작 시 존재한 미커밋 docs/MVP.md는 그대로 보존했다.
 
 - 2026-10-29 / 44fc69a: 기능 중심 구조·개발 검사·문서 체계·의존성 정비, chi-toolbox 이름 및 GitHub 주소 통일. check/단위 12개/build/전체 보호 API smoke/Edge 11화면×5너비 통과. Windows 배포 후 public health/login/manifest/메모·파일·프로필 200, 미인증 설정 GET·PATCH/프로필/메모 휴지통/다운로드 401. 로컬·서버 audit 0건. 후속 문서 커밋까지 source와 양쪽 chi-toolbox-windows.bundle을 동기화하며 앱 재시작은 하지 않는다.
 - 2026-09-29~30: 드래그·즐겨찾기·프로필/설정·학식/카드 UI 배포(565f0a6), 인수인계(3b1036a). 상세 과거 이력은 Git log를 따른다.

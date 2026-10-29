@@ -50,6 +50,8 @@ git bundle create C:/Services/chi-toolbox-windows.bundle main
 
 health는 프로세스 생존 확인이며 DB/Auth/Storage 전체 검증은 아닙니다. 미인증 API가 401인지, login/manifest가 정상인지 확인합니다. 실제 사용자 계정 흐름은 별도 확인합니다. 예약 worker를 smoke 목적으로 실행하지 않습니다(만료 자료를 실제 삭제함).
 
+공통 UI 단계의 새 화면은 `/toolbox`, `/toolbox/lms`, `/toolbox/lms/assignments`, `/toolbox/settings`에 있습니다. 이 경로들은 개인 데이터를 제공하지 않는 공개 빈 화면이며 별도 환경 변수나 DB migration이 필요하지 않습니다. 기존 루트 서비스와 로그인은 유지됩니다. `test:toolbox`로 검증한 뒤 같은 앱 릴리스에 포함하고, 배포 후 각 경로의 HTTP 200과 실제 새 화면 문구를 확인합니다.
+
 ## 새 PC 인수인계
 
 GitHub가 아직 push 전이면 서버 bundle이 최신 소스입니다.

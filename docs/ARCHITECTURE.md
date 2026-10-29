@@ -48,7 +48,9 @@ deploy/windows/         production 릴리스 전환·복구·작업 설치
 
 ## 새 기능·변경 절차
 
-1. 기능 소유 디렉터리에서 시작한다. 새 기능은 `features/<name>`과 `shell/workspaces.ts`에 등록한다. 기존 첫 9개 위치는 Alt+1~9 계약이다.
+새 MVP 공통 UI는 기존 서비스 교체 전 `/toolbox`에 분리한다. 이 경로는 `shell/toolbox`, `features/dashboard`, `features/lms`를 사용하며 기존 `shell/workspaces.ts`에 중복 등록하지 않는다. 세부 경계와 브라우저 설정 계약은 [UI 기반](UI_FOUNDATION.md)을 따른다. 신규 스타일은 기능 옆 CSS Module로 격리한다.
+
+1. 기능 소유 디렉터리에서 시작한다. 기존 서비스 기능은 `features/<name>`과 `shell/workspaces.ts`에 등록한다. 기존 첫 9개 위치는 Alt+1~9 계약이다. 새 MVP는 `app/toolbox` 진입점과 `shell/toolbox` 탐색에 연결한다.
 2. `app/api/.../route.ts`에는 HTTP export와 프레임워크 설정만 둔다. 인증 API는 withAuth, 기능 검증·쿼리는 feature server에 둔다. 로그인·콜백·공개 학식·health는 예외다.
 3. 기능 UI가 커지면 독립적인 수명주기(업로드, 편집 저장) 또는 표시 단위를 분리한다. 모든 상태를 담는 거대한 범용 컨트롤러를 만들지 않는다.
 4. 순수 로직은 unit, 사용자 흐름은 browser, 인증·URL·프록시는 HTTP smoke로 확인한다. 새 회귀를 방지할 테스트만 추가한다.
@@ -70,4 +72,4 @@ shadcn CLI 전체를 CSS 때문에 설치하던 의존성을 제거하고 실제
 - `chi-hub-focus-timer-v2`, sidebar/university 저장 키·이벤트·drag MIME은 기존 브라우저 상태를 보존한다.
 - Windows 기존 경로·계정·작업 이름은 `deploy/windows/production.psd1`에 명시한 호환 배치다. 인증서·환경 파일·릴리스·작업을 자동 이동하거나 재등록하지 않는다.
 - 도메인, Supabase 프로젝트, DB·Storage 이름, 기존 migration 내용은 변경하지 않는다.
-- 현재 열린 개발 폴더 `C:/Projects/chi-hub`도 도구의 작업 경로를 보호하려고 유지한다. 새 clone은 `chi-toolbox`가 기본이다. 기존 폴더 이동은 앱·셸을 닫고 새 경로로 다시 연결할 때 수행한다.
+- 현재 개발 폴더는 `C:/Projects/chi-toolbox`다. 운영의 `chi-hub` 경로는 변경하지 않는다.

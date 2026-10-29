@@ -18,8 +18,10 @@ npm.cmd run dev -- --hostname 127.0.0.1 --port 3000
 
 ## 구조
 
+새 MVP의 공통 UI와 빈 화면은 `/toolbox`에서 확인합니다. 기존 서비스는 `/`에 유지합니다. 아직 LMS·계정 데이터는 연결하지 않으며, 카드 설정만 이 브라우저에 저장합니다. [화면 경로·파일 소유권·검증](docs/UI_FOUNDATION.md)을 참고하세요.
+
 - `app/`: URL 진입점·레이아웃·얇은 API export
-- `shell/`: 화면 조합과 탐색; 새 화면 등록은 `workspaces.ts`
+- `shell/`: 화면 조합과 탐색; 기존 기능은 `workspaces.ts`, 새 MVP는 `toolbox/`
 - `features/`: 기능별 화면·훅·모델·서버 로직
 - `shared/`: 기능 독립 공통 UI·훅·유틸리티·서버 인증
 - `styles/`, `tests/`, `scripts/`, `supabase/migrations/`, `deploy/windows/`
@@ -34,6 +36,7 @@ npm.cmd run build:test
 npm.cmd run test:smoke
 $env:TEST_BROWSER='msedge'
 npm.cmd run test:browser
+npm.cmd run test:toolbox
 npm.cmd audit
 git diff --check
 ```

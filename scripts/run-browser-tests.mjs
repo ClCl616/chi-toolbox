@@ -4,6 +4,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { testEnvironment } from './test-environment.mjs';
 const port = '13002';
 const base = `http://127.0.0.1:${port}`;
+const suite = process.argv[2] === 'toolbox' ? 'toolbox' : 'workspaces';
 try {
   await fetch(`${base}/api/health`);
   throw new Error('Test port is already in use. Stop its owner first.');
@@ -32,7 +33,7 @@ try {
     await sleep(250);
   }
   if (!ready) throw new Error('Test server did not become ready.');
-  const runner = spawn(process.execPath, ['tests/browser/workspaces.mjs'], {
+  const runner = spawn(process.execPath, [`tests/browser/${suite}.mjs`], {
     env: { ...testEnvironment, TEST_BASE_URL: base },
     stdio: 'inherit',
   });

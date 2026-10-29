@@ -17,6 +17,7 @@
     "check": "npm run check:architecture && npm run typecheck && npm run lint && npm test",
     "test:smoke": "node scripts/smoke-server.mjs",
     "test:browser": "node scripts/run-browser-tests.mjs",
+    "test:toolbox": "node scripts/run-browser-tests.mjs toolbox",
     "build:test": "node scripts/build-test.mjs"
   },
   "dependencies": {
