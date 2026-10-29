@@ -1,4 +1,7 @@
-param([string]$RuntimeRoot = 'C:\Services\chi-hub-runtime', [string]$TaskName = 'CHI-HUB-App')
+param([string]$RuntimeRoot, [string]$TaskName)
+$production = Import-PowerShellDataFile (Join-Path $PSScriptRoot 'production.psd1')
+if (-not $RuntimeRoot) { $RuntimeRoot = $production.RuntimeRoot }
+if (-not $TaskName) { $TaskName = $production.TaskName }
 $ErrorActionPreference = 'Stop'
 $previous = Join-Path $RuntimeRoot 'previous.txt'
 if (-not (Test-Path $previous)) { throw 'No previous release recorded.' }

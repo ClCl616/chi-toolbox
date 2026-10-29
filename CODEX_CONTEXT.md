@@ -1,278 +1,76 @@
-# CHI Toolbox 작업 컨텍스트
-
-> 2026-09-30 (Asia/Seoul) 실제 상태 재확인. 이 문서는 현재 상태의 요약이며, 실제 Git·소스·서버 상태가 우선이다. 비밀 값과 개인 SSH 접속 정보는 기록하지 않는다.
-
-## 새 PC / 새 Codex 채팅의 시작 순서
-
-1. `AGENTS.md`와 이 문서를 끝까지 읽고 `git status -sb`, `git log -7 --oneline`, 관련 코드를 확인한다. 기존 변경은 보존한다.
-2. **2026-09-30 사용자 요청으로 최신 기능과 인수인계 문서를 GitHub main에 push했다.** 새 PC는 아래 GitHub clone 절차로 복원한다. 서버/개발 PC의 Git bundle도 같은 소스로 유지한다. 이후 push는 별도 사용자 요청이 필요하다.
-3. 이번 인수인계 시작 시 로컬·서버 소스와 양쪽 bundle은 `f00871e`로 일치하고 작업 트리는 깨끗했다. 실행 빌드는 `565f0a6`이다. 이 문서 정리 커밋도 완료 시 양쪽에 동기화한다. 문서 전용 커밋으로 소스 HEAD와 실행 빌드가 다른 것은 정상이다.
-4. 새 PC에는 Git, Node 24 LTS(`>=24.13.0 <25`), npm을 설치한다. Tailscale/SSH 인증 및 `chi-server` 별칭은 별도로 준비한다. 저장소를 받는 것만으로 SSH 설정이나 환경 파일이 복원되지는 않는다.
-5. `npm.cmd ci` 실행 후 아래 실행/검증 절차를 따른다. 실제 앱 사용에는 `.env.example`을 참고한 PC 전용 `.env.local`이 필요하다. 운영 Supabase 설정을 사용하면 로컬 CRUD도 실데이터를 바꾼다.
-6. 서버 앱/Caddy/휴지통 작업/키 설정과 적용된 migration은 이미 준비되어 있다. 새 채팅에서 초기 설치나 키 입력을 반복하지 않는다. 최신 배포 상태와 남은 확인 사항은 아래 절을 따른다.
-
-### 최신 소스 복원: GitHub (PowerShell)
-
-새 빈 작업 폴더의 상위 디렉터리에서 실행한다:
-
-```powershell
-git clone https://github.com/ClCl616/chi-hub.git
-Set-Location chi-hub
-git status -sb
-git log -7 --oneline
-npm.cmd ci
-```
-
-기존 clone은 사용자 변경을 먼저 보존한 뒤 main에서 `git pull --ff-only origin main`으로 갱신한다. 분기가 갈라졌다면 강제 reset하지 않는다. 환경 파일과 SSH 인증은 별도로 준비한다.
-
-### 대체 복원: Git bundle (PowerShell)
-
-SSH 접근이 준비된 새 PC에서 대상 폴더의 상위 디렉터리에서 실행한다:
-
-```powershell
-scp chi-server:C:/Services/chi-hub-windows.bundle ./chi-hub-windows.bundle
-git bundle list-heads ./chi-hub-windows.bundle
-git clone -b main ./chi-hub-windows.bundle chi-hub
-Set-Location chi-hub
-git remote set-url origin https://github.com/ClCl616/chi-hub.git
-git status -sb
-git log -7 --oneline
-npm.cmd ci
-```
-
-- 서버 접근이 없으면 현재 개발 PC의 `outputs/chi-hub-windows.bundle`을 안전하게 전달받아 같은 방식으로 복원한다. 서버와 이 로컬 bundle에는 이 문서의 커밋까지 포함한다.
-- bundle에는 main과 Git 이력이 포함된다. `.env.local`, SSH 키, worker 키, node_modules, 빌드, `work/` QA 캡처/임시 스크립트는 포함되지 않는다. `clone -b main`을 사용한다.
-- GitHub main과 bundle 모두 2026-09-30 인수인계까지 포함한다. bundle 복원 직후 origin의 ahead/behind 숫자만으로 최신 여부를 판단하지 말고 필요하면 `git fetch origin`으로 원격 추적 정보를 갱신한다.
-
-기존 clone을 갱신할 때는 먼저 작업 트리가 깨끗한지와 현재 브랜치를 확인한 뒤 실행한다:
-
-```powershell
-git status -sb
-git branch --show-current
-git fetch C:/path/to/chi-hub-windows.bundle main
-git merge --ff-only FETCH_HEAD
-npm.cmd ci
-```
-
-경로는 전달받은 실제 bundle로 바꾼다. 분기나 사용자 변경이 있으면 강제 reset/덮어쓰기를 하지 않는다.
-
-origin push는 사용자가 명시적으로 요청할 때만 수행한다.
-
-## 프로젝트와 유지할 사용자 결정
-
-CHI Toolbox는 한국어 개인용 PWA다. 타이머, 루틴/데일리 할 일, 캘린더, 메모, 복습/학습, 수면, 운동, 비공개 드라이브, 학식의 9개 기능과 내 프로필·설정 탭을 제공한다.
-
-- 운영은 집의 Windows 서버, 공개 주소는 `https://chitoolbox.com`. Tailscale/SSH는 관리 전용이다. Sites에 게시하지 않는다. `.openai/hosting.json`은 과거 기록이다.
-- PC·모바일은 **같은 URL에서 전용 UI를 분리하고 데이터·저장 상태는 공유**한다. 밝은 배경/검정/라임, 기존 C 아이콘을 유지한다.
-- Windows 조작은 우클릭·드래그 같은 마우스 중심 사용을 뜻한다. 단축키 안내는 각 페이지에 반복하지 않고 설정에 모은다.
-- 화면에는 선택한 기능 하나만 표시한다. 별도 요약 탭이나 전체 기능 나열로 되돌리지 않는다. 비선택 탭도 keepMounted로 타이머/메모 상태를 보존한다.
-- 표시 이름은 CHI Toolbox / CHI TOOLBOX, 소개 문구는 “모든 것을 한 곳에서. 편리하게.”. 내부 package/서버 경로/작업 이름은 chi-hub/CHI-HUB 유지.
-- 드라이브 삭제는 브라우저 확인창 없이 휴지통으로 이동, **30일 보관** 후 일일 작업으로 영구 삭제한다.
-- 학식 화면은 대전대학교만 제공한다. 다른 학교 선택 버튼을 임의 복원하지 않는다.
-- 삼성 캘린더/삼성 노트/Notion/Google Drive는 기능·UI 참고 대상이다. 이 서비스들과 계정/데이터를 연동한 것은 아니다.
-- 변경 검증 후 로컬 커밋 → bundle/SSH → Windows 서버 반영. GitHub push는 명시적 사용자 요청 시만 허용한다.
-
-## 현재 운영 상태와 환경 구분
-
-2026-09-29 메모·파일 드래그 정리, 계정 즐겨찾기, 하단 프로필/설정 고정, 학식 필터 제거·핀 배치 개선 `565f0a6`의 로컬 검증·Windows 배포를 완료했다. 계정 설정용 migration과 설정/프로필 API를 추가했으며 의존성 변경은 없다. 아래 실행 빌드를 공개 HTTPS에서 확인했으며 후속 문서 커밋은 앱 재시작 없이 소스/bundle만 동기화한다. GitHub main에는 2026-09-30 사용자 승인으로 최신 기능과 인수인계 문서까지 전달했다.
-
-| 항목 | 현재 상태 |
-| --- | --- |
-| 실행 빌드 | `565f0a6` (드래그 정리 / 즐겨찾기 / 프로필·설정 고정) |
-| 실행 릴리스 | `C:/Services/chi-hub-runtime/releases/20260929-175900-619-565f0a63e1d9` |
-| 서버 소스 | `C:/Services/chi-hub` |
-| 앱 | CHI-HUB-App, LOCAL SERVICE, Running, `127.0.0.1:3000` health 정상 |
-| HTTPS | CHI-HUB-Caddy 서비스 Running, Caddy 2.11.4 |
-| Caddy 경로 | `C:/Services/chi-hub-caddy`의 Caddyfile/data/logs |
-| 휴지통 작업 | CHI-HUB-Trash, NETWORK SERVICE, 매일 서버 현지 04:00, Ready |
-| 마지막 작업 실행 | 2026-09-30 04:00:01, LastTaskResult 0; 메모 정리 포함 버전의 예약 실행 성공 |
-| 다음 작업 실행 | 2026-10-01 04:00 (서버 예약 정보 기준) |
-| 서버 도구 | Node 24.21.0 / npm 11.19.0 |
-| 현재 개발 PC | `C:/Archive/Project/chi-hub`, `.env.local` 없음 |
-
-- 현재 PC는 Node 24.19.0을 사용하고 npm이 PATH에 없어 `node work/npm-tool/package/bin/npm-cli.js`(11.19.0)를 사용했다. 이 임시 경로에 새 PC가 의존해서는 안 된다. 아래 명령은 표준 `npm.cmd` 기준이다.
-- 앱 환경은 `.env.example`의 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`. 공개 anon/publishable key만 사용하고 service_role/secret key를 앱에 넣지 않는다.
-- worker만 서버 전용 `C:/Services/chi-hub-maintenance/trash.env`의 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`를 사용한다. 키 설정 완료. 보호 ACL과 NETWORK SERVICE 읽기 권한, 앱 LOCAL SERVICE 접근 차단을 유지한다. 실제 값을 출력/커밋하지 않는다.
-- Google OAuth: 운영 도메인 Site URL/콜백 등록은 사용자 완료 확인. 로컬 localhost/127.0.0.1 콜백도 유지한다. 실제 계정 로그인 검증은 아직 별도 필요하다.
-- `.env.local` 공개 값은 client build에 포함되므로 환경 변경 시 재빌드 필요. 서버 환경/릴리스는 별도 보관하며 bundle에 포함하지 않는다.
-- 공인 IP는 DHCP이고 DNS 자동 갱신은 미구현. 공유기 서버 내부 IP 예약은 사용자 완료 확인. 앱 개발 서버나 포트 3000/13000을 공개하지 않는다.
-
-## 코드 구조와 구현 완료 내용
-
-스택: React/React DOM/RSC 19.2.8, Vinext 1.0.0-beta.10, Vite 8.3.0, TypeScript 5.9.3, Tailwind 4, Base UI 1.7.0, Supabase JS/SSR. Tiptap 패키지는 3.31.3 고정, 읽기는 react-markdown 10.1.0/remark-gfm 4.0.1. 브라우저 회귀 검사는 Playwright 1.62.1.
-
-- 2026-09-29 의존성 감사에서 `shadcn → @modelcontextprotocol/sdk → ajv → fast-uri`의 취약점 1건이 확인돼 잠금파일의 fast-uri만 3.1.6→3.1.8로 갱신했다. 앱 소스/standalone에서 이 패키지 참조는 확인되지 않았다. 로컬/서버 npm audit는 0건이며 [공식 보안 안내](https://github.com/advisories/GHSA-qw65-cvwx-89v3)의 수정 범위에 해당한다.
-
-### 공통 셸과 반응형
-
-- `app/page.tsx`, AppShell/DashboardWorkspace, `components/layout/desktop-navigation.tsx`, `mobile-navigation.tsx`.
-- CSS 순서: globals → dashboard → workspace → desktop → mobile → enhancements → productivity. 820px 기준 전용 메뉴/화면, 중간 태블릿 폭 보정. 복습·학식 구분·키보드 스타일은 `app/productivity.css`.
-- 탭 쿼리: `?view=focus|morning|calendar|notes|study|sleep|workouts|files|meals|profile|settings`. 기본 focus, 뒤로 가기/기존 개별 경로 redirect, 로그인 복귀 시 쿼리/해시 보존.
-- 요약은 API 변경 이벤트로 갱신, 조회 실패는 0 대신 대시. 사이드바 상태 키는 `chi-hub-sidebar`.
-
-### 계정별 정리 / 프로필
-
-- `workspace_preferences`는 `(user_id,key)`별 배열을 저장한다. 즐겨찾기, 사용자 메모 폴더, 메모 순서, 파일 순서를 각각 저장하며 다른 설정 키를 덮어쓰지 않는다. RLS·명시적 권한으로 본인만 조회/삽입/수정, anon 및 직접 삭제는 허용하지 않는다.
-- `app/api/preferences/route.ts`, `hooks/use-workspace-preferences.tsx`, `lib/workspace-preferences.ts`. 키/값 검증과 UUID version 비교로 오래된 화면 저장은 409 처리한다. 낙관적 UI 실패 시 복구하고 서버 상태를 다시 읽는다. 계정에 저장되며 다른 기기는 재접속/새로고침 시 반영한다(실시간 구독 없음).
-- `hooks/use-card-drag.ts`: HTML drag/drop 전용 MIME과 실제 드래그 소스 검증. 메모는 기본 카테고리 또는 사용자 폴더로 드래그 이동, 파일은 폴더 버튼·경로·내 드라이브에 드롭해 이동. 카드에 드롭하면 사용자 지정 순서를 저장하며 검색/다른 폴더의 숨겨진 항목 순서를 보존한다. 휴지통·저장 중에는 드래그를 막는다. 파일 드래그 정렬 시 사용자 지정순으로 전환한다.
-- 메모 폴더는 기존 category 기반의 평면 폴더다. 사용자 폴더 추가(최대 50개, 이름 1~40자)와 빈 폴더 보존을 지원한다. 메모 폴더 이름 변경/삭제 UI는 없으며, 새 메모의 기본 분류는 선택한 폴더와 무관하게 개인이다. 기존 편집기 저장 초안이 있으면 이동 전 저장하고 이동 후 category가 이전 값으로 되돌아가지 않도록 갱신한다. 실제 중첩 폴더는 드라이브에만 있다.
-- `components/layout/navigation-sections.tsx`: 즐겨찾기와 접기 가능한 계획·집중/생활 관리/자료·정보 그룹. 내 프로필·설정은 PC 사이드바와 모바일 전체 메뉴의 하단에 고정하고 기능 목록만 스크롤한다. 별 버튼으로 즐겨찾기 추가/해제. 기존 Alt+1~9 번호는 보존한다. 그룹의 접힘 상태는 저장하지 않으며 즐겨찾기된 탭은 원래 그룹에서 중복 표시하지 않는다.
-- `components/profile-workspace.tsx`, `/api/profile`: 본인 이메일 조회 및 profiles.display_name 수정(1~60자), 로그아웃. 기존 profiles RLS를 사용하며 다른 계정 ID는 입력받지 않는다.
-
-### 캘린더
-
-- `components/calendar-workspace.tsx`, `lib/calendar.ts`, `app/api/calendar/route.ts`, `app/api/calendar-events/route.ts`.
-- 월/주/일정 목록, 오늘/날짜 이동, 검색/종류 필터, 전체 폭 달력. 모바일 주 보기는 세로 목록.
-- 날짜 팝업에서 일정 추가/수정/삭제, 종일/당일 시작·종료 시간, 장소·메모·색상, 매일/매주/매월/매년 반복과 종료일.
-- 반복은 별도 행을 대량 생성하지 않고 시작일과 규칙을 저장해 화면 날짜마다 계산한다. 수정/삭제는 전체 시리즈에 적용. 월말 31일/윤일처럼 없는 날짜는 건너뛴다.
-- 일정·루틴·할 일·수면·집중 기록 통합. 다일 일정, 단일 반복 회차 예외, 알림, 외부 캘린더 동기화는 미구현.
-
-### 메모
-
-- `components/notes-workspace.tsx`, 지연 로드하는 `rich-note-editor.tsx`, `hooks/use-note-editor.ts`, `app/api/notes/route.ts`.
-- 카테고리/검색/고정/격자·목록, 별도 문서 편집. 서식 편집/Markdown 원문/읽기 모드, `/` 블록 메뉴와 키보드 선택, 제목·목록·체크리스트·인용·코드·표·링크·실행 취소.
-- DB에는 Markdown 문자열 저장. HTML/각주가 감지된 기존 문서는 원문 모드로 연다. 복잡한 비지원 문법은 원문 유지 권장; 서식 편집 시 지원 블록 기준으로 정규화될 수 있다. 읽기 모드는 raw HTML 실행 차단. 기존 스티커/필기 유지.
-- 800ms 자동 저장, Ctrl/⌘+S, 저장 요청 직렬화. 새 메모 UUID 재사용/POST upsert로 재시도 중복 방지. 제목 변경 PATCH 응답을 목록에 즉시 반영한다.
-- 목록 복귀/다른 메모 열기 전 저장 완료 확인, 미저장 시 이탈 경고. 50,000자 초과 저장은 절단 대신 오류 반환.
-- 삭제는 `deleted_at` 기반 휴지통 이동. 메모 탭 휴지통에서 내용/필기를 확인하고 30일 이내 복원한다. DB trigger와 활성 항목 API 필터가 삭제 후 자동 저장 및 만료 복원을 차단한다. worker의 `purge_expired_notes`가 만료 메모를 정리한다. 이 기능 적용 전에 이미 영구 삭제된 메모는 복구할 수 없다.
-- `components/note-card.tsx`: 메모 우클릭 메뉴에서 열기/삭제, 휴지통에서는 내용 보기/복원. 더보기와 편집기의 삭제 버튼은 사용자 요청으로 제거했다. 삭제는 카드 우클릭 메뉴에서 확인 팝업 없이 30일 휴지통으로 이동한다. 터치에서는 길게 눌러 메뉴를 연다. 고정 표시는 미리보기 내부 우측 상단에 겹쳐 표시한다. 핀 모양만 남기고 배경/그림자와 핀용 여백을 제거해 줄바꿈·미리보기 배치를 바꾸지 않는다. 클릭한 메모 ID로 처리하고 요청 실패 시 목록을 유지하며 오류를 표시한다. 동시 삭제/복원 요청을 막는다.
-
-### 복습 / 학습
-
-- `components/study-workspace.tsx`, `app/api/study/route.ts`, `lib/study.ts`. 학습 제목/과목/내용/복습일 등록·수정, 오늘(밀린 항목 포함)/전체/보관함, 제목 검색과 30개 단위 페이지 이동.
-- 내용을 먼저 떠올리고 공개한 뒤 다시 학습/기억했어요/쉬웠어요 평가. 일반 진행 간격은 1→3→7→14→30→60일이며, 다시 학습은 1일 후/단계 초기화, 쉬움은 2단계 진행한다. 날짜는 브라우저 현지 날짜 기준이다.
-- `study_items`, `study_reviews`는 사용자별 RLS와 소유자 복합 FK를 사용한다. review RPC는 row lock, 예상 복습 횟수, 동일 요청 UUID 재사용으로 중복 진행을 막는다. 수정/보관은 updated_at 비교로 오래된 화면의 덮어쓰기를 차단한다. 생성 재시도도 같은 UUID를 유지한다.
-- 최근 전체 복습 기록 20개 내 해당 항목 기록을 표시한다. 외부 학습 서비스 연동·알림·메모 자동 연결·학습 항목 영구 삭제 UI는 없다. 보관함에서 학습을 중단/재개한다.
-
-### Windows 마우스 / 키보드
-
-- `components/workspace-shortcuts.tsx`: Ctrl+K 작업 검색·전환, F1 설정 탭, Alt+1~9 기존 기능 탭 이동, Ctrl+Shift+F 현재 화면 검색, Alt+N 새 항목/드라이브 추가 메뉴. 메모 Ctrl+S와 팝업 Esc 유지.
-- `components/settings-workspace.tsx`: 마우스/단축키 사용 안내를 모은 설정 탭(`?view=settings`). PC 사이드바와 모바일 전체 메뉴에서 접근한다. 화면 제목 옆 단축키 버튼, 사이드바 단축키 툴팁, 메모 편집기 저장 단축키 문구는 제거했다. 프로필·설정은 하단 고정 탭이며 Alt+숫자 단축키 대상에 추가하지 않는다.
-- 한글 조합 중, AltGr, 반복 키, 팝업/메뉴에서는 전역 단축키를 무시한다. 입력 요소에서는 Alt 작업 이동을 가로채지 않는다. 기존 브라우저 뒤로 가기와 마우스 뒤로 버튼은 쿼리 기반 작업 이동에 적용된다.
-- 드라이브 폴더 버튼에서 F2 이름 변경·Delete 휴지통, 파일 카드에서 Enter 다운로드, 삭제는 우클릭 메뉴로 수행한다. 키보드 포커스 강조, 마우스 hover, Segoe UI/Malgun Gothic 폴백, 고대비·모션 감소 환경을 지원한다. 네이티브 Windows 앱으로 변환한 것은 아니다.
-
-### 드라이브 / 휴지통
-
-- `components/files-workspace.tsx`, `app/api/files/route.ts`, `app/api/folders/route.ts`.
-- `components/drive-file-card.tsx`: 메모와 같은 세로 미리보기 카드, 하단 파일명·용량·날짜. 상시 작업 버튼 없이 우클릭(터치 길게 누르기) 메뉴로 다운로드/폴더 이동/삭제, 휴지통에서 복원한다. 파일명 보존 다운로드 경로와 만료 복원 차단은 유지한다. 폴더 조작 UI는 기존과 같다.
-- ‘추가’ 버튼 위치에 열리는 메뉴로 파일/폴더 추가. 중첩 폴더 생성·경로 탐색·이름 변경·파일 이동. 기존 파일은 folder_id=null인 루트에 유지.
-- 현재 폴더에 파일 업로드/드래그앤드롭, 검색/유형/정렬/격자·목록, 파일당 500 MiB. private-files 비공개 bucket/사용자 경로 정책 유지. 파일 목록은 4분마다 갱신.
-- 이미지 미리보기 서명 URL은 5분. 다운로드는 `/api/files/download?id=...`에서 로그인/소유권/휴지통 상태 확인 후 새 60초 Storage 서명을 발급하고 스트리밍한다. `Content-Disposition`의 UTF-8 filename*로 한글·공백 포함 원본 파일명을 보존하고 브라우저 전체 파일 메모리 적재를 피한다. 다운로드 트래픽은 Windows 앱을 경유한다.
-- 파일 삭제는 즉시 화면에서 숨기고 deleted_at 저장, 실패 시 목록 복구. 폴더 삭제는 활성 하위 폴더/파일을 원자적으로 휴지통 이동. 별도 삭제했던 항목의 보관 시각은 바꾸지 않는다.
-- 30일 이내 복원. 폴더는 부모부터 복원, 원래 부모가 삭제된 항목은 루트로 복원. 폴더 자체 이동 UI와 로컬 디렉터리 통째 업로드는 미구현.
-- `scripts/purge-trash.mjs` → `trash-worker.mjs`: 만료 파일 claim → Storage API로 바이트 삭제 → DB 메타데이터 삭제. 실패는 재시도 가능하도록 보존. 이후 자식/파일이 없는 만료 폴더를 아래에서 위로 정리하고 `purge_expired_notes`로 만료 메모를 정리한다. Storage 객체를 SQL로 직접 삭제하지 않는다.
-- worker는 서버 소스의 스크립트를 실행하므로 소스 변경도 예약 작업에 반영된다. 작업/키 재등록은 불필요하다.
-
-### 기존 기능에서 보존할 동작
-
-- 집중/휴식 타이머는 `chi-hub-focus-timer-v2` 종료 시각으로 새로고침/백그라운드 복원. 완료 팝업은 body portal이라 숨겨진 탭에서도 표시.
-- 루틴의 일간/요일 반복 및 날짜별 daily_tasks, 수면 시작/종료/직접 기록(진행 기록은 사용자당 하나), 운동 기록/최근 7일 요약 유지.
-- 학식은 대전대 공식 HTML에서 혜화문화관/제2생활관/HRC 파싱. 기존 cbnu/hufs 저장 선택도 dju로 복원. 타 학교 서버 코드는 남아 있지만 UI 복원 금지. 브라우저 5분/서버 30분/stale 24시간 cache, 외부 HTML 변경에 취약.
-- 학식은 PC에서 조식 | 중식 | 석식 세 열을 나란히 놓고 식당별 메뉴를 각 열에 세로로 쌓는다. 모바일(820px 이하)은 한 열로 전환한다. 제목·아이콘·테두리는 유지하며 전체 식사/조식/중식/석식 필터는 제거했다. 날짜·식당 선택은 유지한다. 아침/점심/저녁 별칭도 인식하며 복합/미분류 표기는 원문을 유지해 기타 식사로 표시한다. 없는 식사는 미공개 안내를 보여준다.
-
-## DB 변경 이력과 주의점
-
-- `20260929084024_workspace_preferences.sql`: 계정별 폴더/순서/즐겨찾기 및 version, 본인 소유 RLS/권한. 운영 적용 완료, 합성 계정 트랜잭션 롤백으로 권한·충돌 검증. 기존 사용자 자료 테이블/Storage 변경 없음.
-
-- 기존 `0001`~`0005`: 사용자 자료/Storage/RLS, 수면 제한/500 MiB, 반복 루틴/daily_tasks, calendar_events, 메모 유형/카테고리/필기.
-- `20260922092822_drive_trash.sql`: files.deleted_at/purge_started_at, 30일 보관 trigger, service_role 전용 claim_expired_files. 운영 적용 완료.
-- `20260922101159_calendar_details_and_drive_folders.sql`: 일정 시간/장소/색상/반복, drive_folders, files.folder_id/trash_root_id. 소유자 복합 FK/RLS, 계층 순환/삭제된 목적지 차단, 계정별 advisory lock, 원자적 폴더 삭제·복원 RPC, 서비스 전용 purge_expired_folders. 운영 적용 완료.
-- `20260929071714_study_and_note_trash.sql`: notes.deleted_at/보관 trigger/서비스 전용 purge_expired_notes, study_items/study_reviews/RLS 및 원자적 review_study_item. 운영 적용 완료. CLI로 생성한 파일은 MCP가 실제 적용한 migration version과 일치하도록 이름을 맞췄다.
-- 기존 0001~0005는 실제 테이블이 존재하지만 migration history에 없다. **db push로 전체 migration을 다시 실행하지 않는다.** 새 schema 변경만 새 migration으로 만들고 실제 이력/정책을 확인한다.
-- 최근 적용 시 files/drive_folders/calendar_events RLS 활성, anon의 폴더 RPC 실행 및 authenticated의 영구 폴더 정리 실행 차단 확인. API는 getAuthContext로 사용자를 확인한다.
-- Supabase security Advisor는 2026-09-29 재확인했으며 새 경고 없이 기존 [유출 비밀번호 보호 비활성화](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) 1건을 유지한다.
-
-## 새 PC에서 실행 / 검증
-
-실제 앱 개발은 별도 준비한 로컬 `.env.local`과 함께:
-
-```powershell
-npm.cmd ci
-npm.cmd run dev -- --hostname 127.0.0.1 --port 3000
-```
-
-사용자 자료에 접근하지 않는 검증은 별도 PowerShell에서 dummy 설정으로 실행한다. 실제 환경 파일을 덮어쓰지 않으며, 검증용 셸은 종료 후 폐기한다:
-
-```powershell
-npm.cmd run typecheck
-node --test scripts/calendar.test.mjs scripts/trash-worker.test.mjs scripts/productivity.test.mjs scripts/preferences.test.mjs
-$env:NEXT_PUBLIC_SUPABASE_URL='https://smoke-test.invalid'
-$env:NEXT_PUBLIC_SUPABASE_ANON_KEY='smoke-test-anon-key'
-$env:NEXT_PUBLIC_SITE_URL='https://chitoolbox.com'
-npm.cmd run build
-node scripts/smoke-server.mjs
-```
-
-브라우저 회귀 검사는 위 dummy 설정으로 빌드한 production 서버를 별도 셸에 실행하는 방식으로 최종 검증했다. 테스트 중 소스 변경으로 개발 서버가 재시작되면 동적 모듈 로딩이 실패할 수 있다:
-
-```powershell
-$env:NEXT_PUBLIC_SUPABASE_URL='https://smoke-test.invalid'
-$env:NEXT_PUBLIC_SUPABASE_ANON_KEY='smoke-test-anon-key'
-$env:NEXT_PUBLIC_SITE_URL='http://127.0.0.1:13002'
-$env:PORT='13002'
-node scripts/start-server.mjs
-```
-
-다른 셸에서 설치된 Microsoft Edge를 사용한다:
-
-```powershell
-$env:TEST_BROWSER='msedge'
-node scripts/test-workspaces.mjs
-```
-
-Edge가 없으면 `npx.cmd playwright install chromium`으로 브라우저를 설치하고 TEST_BROWSER를 `chromium`으로 사용한다. 이 스크립트는 localhost만 허용하며 `/api/**`를 mock한다. UI 검사 결과가 실제 로그인/운영 Storage CRUD 성공을 의미하지 않는다. 캡처는 Git 제외 `work/qa/`에 생성한다.
-
-- `scripts/test-drive-folders.sql`: 합성 계정/자료로 계층·복원·RLS 검사. 단독 실행하면 안 되며 **명시적인 BEGIN/ROLLBACK 안에서** 실행한다. 정기 자동 테스트가 아니다. 기존 `scripts/test-trash.sql`도 롤백 검사용이다.
-- `scripts/test-preferences.sql`은 전체 BEGIN/ROLLBACK 트랜잭션으로 합성 계정 소유권/anon 차단/오래된 버전 갱신 차단을 검사한다.
-- `scripts/test-study-notes.sql`은 BEGIN/ROLLBACK을 포함한 전체 파일로 실행한다. 합성 계정으로 간격/중복/오래된 복습/보관/RLS/메모 복원·만료/RPC 권한을 검사한다. 실제 사용자 자료를 만들거나 변경하지 않는다.
-- 브라우저 검사에서 Edge 다운로드는 인터셉트 밖의 재요청이 발생하므로 다운로드 링크 경로 검증 후 별도 loopback HTTP fixture로 UTF-8 파일명/실제 바이트를 검사한다. 이것은 실제 운영 로그인·Storage 다운로드 검증을 대신하지 않는다.
-- 전체 `npm.cmd run lint`는 현재 `app/api/routines/route.ts`의 no-base-to-string 2건(42/91행)이 남는다. 이번 문서 정리에서 다시 확인했다. 이전 문서의 8건/3건은 오래된 결과다.
-- `git diff --check`, `git status -sb`로 변경 범위를 확인한다. 문서만 변경한 작업에서는 앱 빌드/CRUD를 불필요하게 반복하지 않는다.
-
-## 배포 / 다른 PC로 전달
-
-`deploy/windows/README.md`에 운영 명령이 있다. 그 문서의 2026-09-16 전환 당시 린트/DB 변경 없음 문구는 과거 범위이며 현재 상태는 이 문서를 따른다.
-
-1. 로컬 검증 → 커밋 → `git bundle create outputs/chi-hub-update.bundle main` → SSH로 서버 전달.
-2. 서버 `C:/Services/chi-hub`의 사용자 변경 유무 확인 → bundle fetch → `git merge --ff-only FETCH_HEAD`. 실패 시 강제 reset 금지.
-3. 코드/의존성/앱 환경 변경이면 `powershell -NoProfile -ExecutionPolicy Bypass -File deploy/windows/deploy.ps1` 실행. clean source에서 npm ci/build, 후보 포트 13000 health 검사 후 active 전환. 이전 릴리스 보존.
-4. **문서만 변경하면 소스/bundle 동기화만 수행**하고 앱 재시작하지 않는다. 다른 PC용 `C:/Services/chi-hub-windows.bundle`과 개발 PC `outputs/chi-hub-windows.bundle`도 최종 커밋으로 갱신한다.
-5. `active.txt`, 앱/Caddy 상태, loopback/public health를 확인한다. `rollback.ps1`은 앱 빌드 복구이며 DB rollback이 아니다. 중지는 PID를 검증하는 `stop-app.ps1` 사용.
-
-복잡한 원격 PowerShell은 UTF-16LE Base64 `-EncodedCommand`로 전달하면 중첩 인용 문제를 줄일 수 있다. `work/`의 이전 임시 배포/키 설정 스크립트는 bundle에 없으며 새 PC 필수 도구로 취급하지 않는다.
-
-## 검증 완료 / 남은 확인 사항
-
-### 2026-09-29 드래그 / 탭 정리
-
-- 식사 필터 제거, 미리보기 배치를 유지하는 우측 핀, 메모·파일 드래그 이동/순서, 사용자 메모 폴더, 계정 즐겨찾기·하단 프로필/설정을 구현했다.
-- 새 설정 migration 적용 및 합성 계정 RLS/버전 충돌 테스트 롤백 완료, 보안 Advisor 새 경고 없음. 타입 검사/변경 파일 lint/단위 검사 11개/production build/HTTP smoke 통과. mock Edge에서 메모·파일 드래그 폴더 이동과 순서 저장·재접속 유지, 실패 복구, 즐겨찾기·설정 충돌 보호, 하단 메뉴 고정, 프로필 저장, 기존 기능 및 11개 화면 × 5너비 검사를 통과했다. PC·모바일 캡처 확인 완료. 운영 배포 완료: 실행 빌드 `565f0a6`, 앱/Caddy Running, 수신 `127.0.0.1:3000`, 후보 포트 종료. 공개 health/login/profile/settings/notes/files/meals/manifest 200, 미인증 설정·프로필 GET/PATCH 및 휴지통·다운로드 API 401. 서버 audit 0건, 로컬 QA 서버 종료.
-
-### 2026-09-30 인수인계 재확인
-
-- 인수인계 시작 시 로컬/서버 소스·bundle `f00871e` 일치, 두 작업 트리 clean, 당시 GitHub main `4238593` 확인. 실행 릴리스는 위 표의 `565f0a6`으로 유지됐다.
-- 실제 코드의 핀/CSS·학식·드래그·즐겨찾기·폴더 기본값·API 목록 제한과 package.json, 실행/배포/worker 스크립트를 문서와 대조했다.
-- 앱/Caddy Running, loopback health 정상, `127.0.0.1:3000`만 수신, 후보 포트 13000 종료. 공개 health/login/manifest 200, 미인증 preferences/profile 401 확인.
-- CHI-HUB-Trash의 9월 30일 04:00:01 예약 실행 결과 0 확인. 정리 대상이 없을 수도 있으므로 이 결과만으로 실제 삭제 건수를 단정하지 않는다. 정리 작업을 수동 실행하지 않았다.
-- 전체 lint는 기존 routines 42/91행의 no-base-to-string 2건만 실패했다. 앱 코드를 변경하지 않았으며 빌드·브라우저·DB CRUD/Advisor 검사는 이번 문서 작업에서 반복하지 않았다. 위 9월 29일 검증 결과와 구분한다.
-- 인수인계 문서 커밋 `20006ec`을 서버 소스와 양쪽 bundle에 반영했다. 이후 사용자 요청으로 GitHub main에도 push했고 이 동기화 안내를 추가했다. 앱 재빌드·재시작은 하지 않았다.
-
-### 다음 작업 후보와 실제 제약
-
-1. 사용자 계정 로그인/Google OAuth, 기존 자료 및 새 UI의 실사용 확인. health 성공은 DB/Auth/Storage 전체 성공이 아니다.
-2. 드래그는 HTML Drag and Drop 기반 PC 마우스 조작이다. 터치 길게 누르기 메뉴는 검증했으나 모바일 터치 드래그 이동·정렬은 보장하지 않는다. 메모 폴더 이름 변경/삭제 및 선택 폴더에서 새 메모 생성 기본값 개선은 미구현이다.
-3. 계획된 서버 재부팅 후 앱/Caddy 자동 복구 확인. 사용자 원격 작업을 끊을 수 있으므로 임의 재부팅하지 않는다.
-4. 코드 확인상 캘린더의 수면/집중 날짜는 timestamp 문자열의 앞 10자를 사용한다(`app/api/calendar/route.ts`). 사용자 현지 날짜 변환이 아니므로 자정 부근 날짜 표시 확인/보완 후보다. 이번 문서 작업에서 수정하지 않았다.
-5. 목록 API는 페이지네이션이 없다: 메모 200개, 파일 1000개, 폴더 요청 5000개이며 실제 반환에는 Supabase 설정 상한도 적용될 수 있다. 대량 자료 탐색/검색 범위 개선은 후속 과제다.
-6. 기존 routines 린트 2건, 복잡한 Markdown 호환성, 큰 client chunk, 공인 IP/DNS 변경 대응, 로그/릴리스 보관 정책은 후속 개선 후보다.
-7. 모바일은 PWA이며 네이티브 모바일/워치 앱은 아직 만들지 않았다. 관련 보안·확장 안내는 `docs/SECURITY_AND_APPS.md`.
-
-**현재 진행 중인 기능 개발은 없다.** 2026-09-29 요청한 기능과 의존성 패치는 검증·운영 배포까지 완료되었고 9월 30일 인수인계 상태를 재확인했다. 위 후속 후보는 사용자가 요청하지 않은 새 개발 목표로 자동 확대하지 않는다.
-
-## 최근 핵심 이력
-
-- `565f0a6` / 배포 기록 `f00871e`: 메모·파일 드래그 이동/순서, 폴더 추가, 즐겨찾기·하단 프로필/설정, 식사 필터 제거·우측 핀. 설정 migration/RLS·충돌 보호, 11화면 회귀 및 Windows 배포.
-- `e96d8d9`, `86d6708`: 학식 세 열, 메모·파일 세로 카드와 우클릭 메뉴, 설정에 단축키 안내 통합. 최신 배치와 기능은 위 구현 설명을 따른다.
-- `eb13304`, `60d70d8`: 간격 복습·메모 30일 휴지통·원본 파일명 다운로드·Windows 조작, fast-uri 간접 의존성 보안 패치.
-- `c695539`: 캘린더 반복/시간, Tiptap Markdown, 드라이브 계층 폴더 확장. 과거 GitHub 동기화 기준은 `4238593`이며 현재는 2026-09-30 인수인계까지 반영됨.
-- Windows 자가 호스팅 전환, Caddy/worker 계정 분리 및 이전 배포·문서 이력은 `git log`를 확인한다.
+# Chi Toolbox 작업 컨텍스트
+
+> 2026-10-29 Asia/Seoul. 실제 Git·코드·운영 상태가 문서보다 우선한다. 비밀 값은 기록하지 않는다.
+
+## 시작 순서와 문서 역할
+
+1. AGENTS.md와 이 문서를 끝까지 읽고 git status -sb / git log -7 --oneline을 확인한다. 기존 dirty 변경은 보존한다.
+2. README.md는 설치·검증 시작점, docs/ARCHITECTURE.md는 구조·기능 추가 기준, deploy/windows/README.md는 운영 절차다.
+3. Node 24 LTS >=24.13.0 <25와 npm/Git을 준비하고 npm.cmd ci로 복원한다. 현재 개발 PC는 C:/Projects/chi-hub, Node 24.20.0 / npm 11.19.0이다.
+4. 실제 앱에는 별도 .env.local이 필요하다. 현재 개발 PC에는 없다. 운영 Supabase를 설정하면 로컬 CRUD도 실데이터 변경이다.
+5. SSH/Tailscale 및 chi-server 별칭·인증은 저장소로 복원되지 않는다. 서버의 환경 파일과 worker 키는 이미 준비되어 있으며 재입력하지 않는다.
+
+## 이번 구조 개편
+
+- 기능별 features, 기능 독립 shared, 조합 shell, 얇은 app 라우트로 분리했다. 자세한 진단·규칙은 ARCHITECTURE.md 참조.
+- 공통 인증/오류 경계 withAuth, 캘린더 전용 데이터 갱신 훅, 단일 화면 registry, 독립 업로드 훅·폴더 경로 함수·기능 타입을 적용했다.
+- 미사용 UI·브라우저 Supabase 클라이언트 56개와 사용되지 않는 FeatureLayout을 제거했다. 사용 중인 DataNotice와 UI는 보존했다.
+- tests/unit, tests/browser, tests/database로 검사 목적을 분리했다. npm run check가 구조 경계·타입·lint·단위 검사를 수행한다. CI는 Windows에서 dummy build/smoke/browser까지 검사하고 배포는 하지 않는다.
+- React 19.2.8, Vinext 1.0.0, Vite 8.3.5, TS 5.9.3, Tailwind 4.2.1. Tiptap 3.31.3, Playwright 1.62.1 유지. Supabase 버전 고정. shadcn CLI와 미사용 UI 의존성 제거, oxfmt 0.75.0, fast-uri 보안 패치, fflate 0.7.5 override. ipaddr.js는 standalone 해석을 위해 직접 고정했다.
+- 로그인 useSearchParams의 Suspense 경계를 추가했다. 전체 파일 lint 무시를 줄이고 routines/daily-tasks의 무분별한 객체 문자열 변환을 입력 타입 검사로 바꿨다.
+- DB migration·사용자 자료·Storage·URL·OAuth 계약은 변경하지 않았다. 이름 변경을 이유로 운영 리소스를 새로 만들거나 삭제하지 않았다.
+
+## 이름과 GitHub
+
+- 프로젝트/패키지/저장소: chi-toolbox. 브랜드: Chi Toolbox(로고의 대문자 표기는 유지).
+- 사용자가 GitHub 이름 변경을 수행했고 연결 API에서 ClCl616/chi-toolbox를 확인했다. 주소는 https://github.com/ClCl616/chi-toolbox.git.
+- origin push는 이번 요청에 포함되지 않는다. 이번 개편은 검증 후 로컬 커밋과 서버 bundle로 전달한다. GitHub clone만으로 최신 개편을 얻을 수 있다고 가정하지 말고 HEAD를 비교한다.
+- 최신 전달 bundle은 chi-toolbox-windows.bundle, 업데이트 bundle은 chi-toolbox-update.bundle을 사용한다. 복원 명령은 Windows README 참조.
+- 현재 열린 로컬 폴더 및 운영 소스/runtime/Caddy/maintenance 경로와 작업 이름은 호환 식별자로 유지한다. production.psd1에 기존 배치를 명시했다. 자동 이동은 실행 중 작업·ACL·active/previous 포인터·인증서에 영향을 주므로 하지 않는다. 새 clone 폴더는 chi-toolbox다.
+- 브라우저 chi-hub-* 저장 키·이벤트·drag MIME은 기존 저장 상태와 열린 화면 호환을 위해 유지한다. 과거 migration은 수정하지 않는다.
+
+## 유지할 제품 결정과 데이터 흐름
+
+- 한국어 개인용 PWA, 9개 기능 및 프로필·설정. 같은 URL에서 820px 기준 PC/모바일 UI를 분리하고 저장 상태를 공유한다. 밝은 배경/검정/라임, C 아이콘 유지.
+- 한 번에 선택 화면 하나만 표시하며 keepMounted로 타이머·메모 상태를 유지한다. 기본 focus, ?view=focus|morning|calendar|notes|study|sleep|workouts|files|meals|profile|settings, 기존 개별 URL redirect와 뒤로 가기 유지.
+- 화면 → shared API 훅 → app route → features server → Supabase. 인증은 getUser/cookie이며 RLS와 소유권 조건을 유지한다. 공개 학식·health 및 auth 진입점은 별도다.
+- Google OAuth와 이메일 로그인 지원. localhost/127.0.0.1과 운영 /auth/callback 등록을 모두 유지한다. 실제 로그인 성공은 mock 검사로 확정하지 않는다.
+- 계정 설정은 workspace_preferences의 키별 배열/version. 낙관적 UI 실패 복구와 409 충돌 처리. 다른 기기는 재조회 때 반영되며 realtime 구독은 없다.
+- 타이머는 종료 시각을 localStorage에 저장하며 숨긴 탭에서도 완료 팝업을 표시한다. OS 백그라운드 알림 보장은 별도 문제다.
+- 캘린더는 일정·루틴·할 일·수면·집중을 통합한다. 반복은 규칙 계산, 편집/삭제는 전체 시리즈, 없는 월말/윤일은 건너뛴다. 다일 일정·회차 예외·알림·외부 캘린더 동기화는 없다.
+- 메모는 Markdown, Tiptap 서식/원문/읽기, 필기/스티커, 800ms 직렬 자동 저장·UUID 재사용·미저장 이탈 보호·50,000자 초과 거부. raw HTML 실행 차단. 복잡한 비지원 문법은 원문 유지 권장.
+- 메모와 파일 삭제는 카드 우클릭/터치 길게 누르기에서 확인창 없이 30일 휴지통으로 이동. 만료 복원 및 삭제 후 저장은 DB/API에서 차단한다.
+- 메모 폴더는 category 기반 평면 구조, 추가/빈 폴더 유지/드래그 순서·이동. 폴더 이름 변경/삭제 UI는 없고 새 메모 기본 분류는 개인이다.
+- 드라이브는 중첩 폴더, 현재 폴더 업로드, 파일당 500 MiB, private-files 비공개 bucket/사용자 경로. 미리보기 서명 5분·목록 갱신 4분, 다운로드는 로그인·소유권 확인 후 60초 서명으로 서버 스트리밍·원본 UTF-8 이름 보존.
+- 폴더 삭제는 하위 활성 항목을 원자적으로 휴지통 이동. 기존 별도 삭제 시각은 보존. 복원은 부모부터, 삭제된 부모는 루트 복원. 폴더 이동 UI/로컬 디렉터리 통째 업로드는 없다.
+- 학습은 오늘/전체/보관, 30개 페이지, again/good/easy, 1→3→7→14→30→60일. RPC row lock·예상 횟수·요청 UUID, 수정 updated_at 비교로 중복/오래된 화면을 방어한다. 영구 삭제 UI·외부 학습 서비스·알림은 없다.
+- 학식 UI는 대전대학교만 제공한다. 조식/중식/석식 열과 날짜·식당 선택, 외부 HTML 파싱·5분/30분/stale 24시간 캐시. 기존 다른 학교 서버 처리는 외부 API 호환을 위해 유지하고 UI는 복원하지 않는다.
+- 단축키 안내는 설정에 모은다. Ctrl+K, F1, Alt+1~9, Ctrl+Shift+F, Alt+N. IME/AltGr/입력 요소·메뉴 충돌 방어 유지.
+- 삼성/Notion/Google Drive는 UI 참고 대상이며 데이터 연동은 아니다. 네이티브 모바일·워치 앱과 완전한 오프라인 편집은 없다.
+
+## 운영·DB
+
+- 운영은 집 Windows, chitoolbox.com, loopback 127.0.0.1:3000 + Caddy HTTPS. Tailscale/SSH는 관리 전용. Sites는 사용하지 않는다.
+- 이번 시작 시 서버 소스는 3b1036a, clean, 앱 실행 빌드는 565f0a6이었다. CHI-HUB-App Running, CHI-HUB-Trash Ready를 읽기 전용으로 확인했다. 개편 배포 결과는 아래 최종 기록으로 갱신한다.
+- 앱 공개 환경 키: NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY / NEXT_PUBLIC_SITE_URL. 공개 값도 build에 들어가므로 변경 시 재빌드한다.
+- worker 전용 SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY는 서버 보호 파일에만 둔다. NETWORK SERVICE와 앱 LOCAL SERVICE 권한 분리 유지.
+- worker는 서버 소스 scripts/purge-trash.mjs → trash-worker.mjs. 만료 파일 claim → Storage API 삭제 → DB metadata → 빈 만료 폴더 → 만료 메모 정리. 실패 시 재시도하며 SQL로 Storage 바이트를 직접 삭제하지 않는다.
+- migration 0001~0005: 기본 자료·Storage/RLS, 수면 제약/500 MiB, 루틴·daily_tasks, 일정, 메모 유형.
+- 20260922092822: 파일 휴지통. 20260922101159: 일정 상세/반복과 계층 폴더. 20260929071714: 학습과 메모 휴지통. 20260929084024: 계정 설정.
+- 이전 운영 확인상 0001~0005는 테이블에 반영됐으나 migration history에는 없다. 전체 db push 재적용 금지. 새 schema는 새 migration으로 만들고 실제 이력·정책 확인.
+- 2026-09-29 Advisor의 유출 비밀번호 보호 비활성화 1건은 과거 기록이며 현재 재조회하지 않았다.
+
+## 검증과 남은 제약
+
+- 구조 경계·타입·lint·단위 12개·dummy production build·확장 HTTP smoke 통과. Edge API mock에서 메모/학습/파일/캘린더/드래그/즐겨찾기/프로필과 11화면×5너비 통과. PC·모바일 캡처 확인. npm audit 0건.
+- 실제 운영 DB 쓰기 테스트와 실제 계정 로그인은 수행하지 않았다. health는 DB/Auth/Storage 전체 검사가 아니다.
+- 캘린더 수면/집중 날짜는 timestamp 앞 10자를 사용한다. 현지 날짜 변환 문제는 이번 구조 정비와 분리해 후속 확인한다.
+- 메모 200/파일 1000/폴더 5000 조회 상한, 전체 목록 페이지네이션 부족. Supabase 반환 상한도 별도 적용될 수 있다.
+- HTML Drag and Drop 기반이므로 모바일 터치 정렬 보장은 없다. 복잡한 Markdown 정규화, Tiptap 큰 chunk와 일부 CSS override는 남아 있다.
+- 공인 IP/DNS 자동 갱신, 로그·릴리스 보관 정책, 실제 재부팅 후 복구·사용자 로그인·백업 복구는 추가 확인 필요. 임의 재부팅하지 않는다.
+- 지금 작업은 구조 개편 검증 및 서버 전달 중이다. 완료 후 이 문구와 아래 기록을 최종 상태로 바꾼다.
+
+## 최근 기록
+
+- 2026-10-29: 기능 중심 구조·개발 검사·문서 체계·의존성 정비, chi-toolbox 이름 및 GitHub 주소 통일. 최종 커밋/배포 기록은 완료 시 추가한다.
+- 2026-09-29~30: 드래그·즐겨찾기·프로필/설정·학식/카드 UI 배포(565f0a6), 인수인계(3b1036a). 상세 과거 이력은 Git log를 따른다.

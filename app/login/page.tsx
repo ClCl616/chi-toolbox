@@ -1,4 +1,5 @@
-import { LoginForm } from '@/components/login-form';
+import { LoginForm } from '@/features/auth/components/login-form';
+import { Suspense } from 'react';
 export default function LoginPage() {
   return (
     <main className="login-page">
@@ -11,7 +12,9 @@ export default function LoginPage() {
           <h1>반가워요.</h1>
           <p>계속하려면 로그인하세요.</p>
         </div>
-        <LoginForm />
+        <Suspense fallback={<output>로그인 화면을 불러오는 중…</output>}>
+          <LoginForm />
+        </Suspense>
       </section>
     </main>
   );

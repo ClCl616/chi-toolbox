@@ -1,138 +1,79 @@
-# Windows 운영 안내
+# Windows 운영과 전달
 
-운영 주소: https://chitoolbox.com. 앱은 집의 Windows PC에서 실행하고,
-Tailscale + SSH(`ssh chi-server`)는 관리/배포에만 사용한다.
-이전 Sites 배포는 사용하지 않는다. `.openai/hosting.json`은 이전 배포의 기록이다.
+논리 프로젝트는 chi-toolbox, 도메인은 https://chitoolbox.com 입니다. Tailscale/SSH는 관리 전용입니다. 운영의 기존 경로·작업·서비스는 `production.psd1`에 호환 배치로 유지합니다. 이름 통일을 위해 환경 파일·인증서·기존 릴리스를 이동하거나 Supabase를 재생성하지 않습니다.
 
-## 준비
+## 기존 운영 배치
 
-- Node.js 24 LTS, Git. 서버에서 확인한 버전은 Node 24.21.0 / npm 11.19.0.
-- 소스: `C:\Services\chi-hub`, 운영 릴리스: `C:\Services\chi-hub-runtime`.
-- 공유기의 서버 내부 IP 예약은 사용자 확인으로 완료. 실제 네트워크 값은 문서에 저장하지 않는다.
-- `.env.example`을 `.env.local`로 복사하고 기존 Supabase 프로젝트의 공개 URL/anon 또는 publishable key를 입력한다.
-- 사이트 URL 값은 `https://chitoolbox.com`. 환경 변수 이름은 `.env.example` 참고.
-- service_role/secret 키는 사용하지 않는다. 환경 파일은 Git, bundle, 채팅에 포함하지 않는다.
-- 이 환경은 운영 DB를 사용하므로 마이그레이션을 다시 실행하거나 테스트 레코드를 임의 생성하지 않는다.
+| 역할 | 값 |
+| --- | --- |
+| 소스 | C:/Services/chi-hub |
+| runtime | C:/Services/chi-hub-runtime |
+| 앱 작업 | CHI-HUB-App / LOCAL SERVICE |
+| HTTPS 서비스 | CHI-HUB-Caddy / C:/Services/chi-hub-caddy |
+| 정리 작업 | CHI-HUB-Trash / NETWORK SERVICE / 현지 04:00 |
+| worker 환경 | C:/Services/chi-hub-maintenance/trash.env |
 
-## 최초 배포 (서버의 관리자 PowerShell)
+앱 환경은 소스의 `.env.local`이며 release에 보호 ACL로 복사합니다. worker 환경은 앱과 분리하고 LOCAL SERVICE의 읽기 권한을 허용하지 않습니다. 서버에 이미 설정되어 있으면 재입력·재등록하지 않습니다. 실제 값은 출력하지 않습니다.
 
-```powershell
-Set-Location C:\Services\chi-hub
-powershell -NoProfile -ExecutionPolicy Bypass -File deploy\windows\deploy.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File deploy\windows\install-app-task.ps1
-Invoke-RestMethod http://127.0.0.1:3000/api/health
-```
+## 검증 후 업데이트
 
-`deploy.ps1`은 clean worktree에서 잠금파일대로 설치하고 production build를 만든다.
-별도 릴리스 디렉터리에 빌드/환경 파일을 복사하고 포트 13000에서 상태 검사를 수행한 후
-active.txt를 갱신한다. 기존 앱은 빌드 중 계속 실행된다. 변경 적용 시 짧은 중단이 있다.
-실패한 후보와 이전 릴리스는 자동 삭제하지 않는다.
-
-`CHI-HUB-App` 작업은 부팅 시 LOCAL SERVICE 권한으로 실행된다. 로그인은 필요 없다.
-앱이 비정상 종료되면 1분 간격으로 최대 999회 재시도한다.
-앱 중지는 `stop-app.ps1`을 사용한다. 작업 스케줄러만 중지하면 하위 Node가 남을 수 있다. 이 스크립트는 기록된 PID/시작 시각/실행 경로를 검증한 뒤 해당 프로세스만 종료한다. 수동 중지 후에는 자동 재시작하지 않는다. 시작은 `Start-ScheduledTask -TaskName CHI-HUB-App`.
-로그: `C:\Services\chi-hub-runtime\logs`. 로그/오래된 릴리스 정리는 운영자가 주기적으로 수행한다.
-서버 재부팅 후 task와 /api/health 확인은 실제 운영 전 수행한다.
-
-## HTTPS (앱 로컬 검증 후)
-
-1. 관리자 PowerShell에서 `powershell -NoProfile -ExecutionPolicy Bypass -File deploy\windows\install-caddy.ps1` 실행. 공식 Caddy 2.11.4 Windows x64 zip의 SHA-512 checksum을 검증하고 설치한다. 실패 후 같은 설치를 재개할 때만 디렉터리를 확인하고 `-Resume`을 사용한다.
-2. Caddy 설정은 `C:\Services\chi-hub-caddy\Caddyfile`, 인증서 저장은 data, 로그는 logs에 둔다. installer가 설정 검증, LOCAL SERVICE의 CHI-HUB-Caddy 자동 시작 서비스 및 장애 재시작을 구성한다. 초기에는 서비스를 시작하지 않는다.
-3. 도메인 A 레코드를 집의 공인 IPv4로 유지한다. 잘못된 AAAA 레코드를 만들지 않는다.
-4. 공유기 TCP 80/443을 서버 내부 IP의 80/443으로 전달한다. Windows 방화벽도 해당 포트를 허용한다.
-5. 공유기/방화벽 설정 후 `Start-Service CHI-HUB-Caddy` 실행. 인증서는 Caddy가 발급/갱신한다. 오류는 `C:\Services\chi-hub-caddy\logs\caddy.log` 확인. 공식 Windows 서비스 안내: https://caddyserver.com/docs/running#sc-exe
-6. 앱은 127.0.0.1:3000만 수신한다. 3000/13000을 포트포워딩하지 않는다.
-7. Supabase Authentication > URL Configuration에서 Site URL을 새 HTTPS 주소로 설정한다.
-   Redirect URLs에 `https://chitoolbox.com/auth/callback`과 코드가 쓰는 `?next=...` 경로를 허용한다
-   (예: `https://chitoolbox.com/auth/callback**`). 기존 localhost/127.0.0.1 콜백은 유지한다.
-8. 휴대폰 LTE/5G에서 HTTPS, 기존 계정 로그인, Google OAuth, 파일 다운로드를 확인한다.
-
-Caddy가 HTTPS를 종료하므로 앱 시작 스크립트가 사이트 호스트에 대해서만 forwarded host를 신뢰한다.
-Supabase OAuth provider의 프로젝트 callback 자체는 같은 Supabase 프로젝트를 유지하므로 보통 그대로다.
-외부 서비스 로그인과 사용자 데이터 동작은 실제 계정으로 별도 검증해야 한다.
-공인 IP가 바뀌면 A 레코드를 갱신해야 한다. DNS 자동 갱신은 아직 구현하지 않았다.
-
-## 여러 PC에서 개발 / 서버 업데이트
-
-개발 PC에서는 변경 전 pull, 변경 후 build/typecheck와 관련 검증, commit을 수행한다.
-GitHub push는 사용자가 요청한 경우만 수행한다. 서버에서 개발하거나 강제 reset하지 않는다.
-
-GitHub 동기화 없이 전달하려면 개발 PC에서 명시적인 source bundle을 만든다:
+개발 PC에서 README의 check/build:test/smoke/browser 검증을 마치고 로컬 커밋합니다. main 외 브랜치는 최종 통합 상태를 먼저 확인합니다.
 
 ```powershell
-git bundle create outputs/chi-hub.bundle main
-scp outputs/chi-hub.bundle chi-server:C:/Services/chi-hub-update.bundle
+New-Item -ItemType Directory -Force outputs | Out-Null
+git bundle create outputs/chi-toolbox-update.bundle main
+scp outputs/chi-toolbox-update.bundle chi-server:C:/Services/chi-toolbox-update.bundle
 ```
 
 서버에서:
 
 ```powershell
-Set-Location C:\Services\chi-hub
+Set-Location C:/Services/chi-hub
 git status -sb
-git fetch C:/Services/chi-hub-update.bundle main
+git fetch C:/Services/chi-toolbox-update.bundle main
 git merge --ff-only FETCH_HEAD
-powershell -NoProfile -ExecutionPolicy Bypass -File deploy\windows\deploy.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File deploy/windows/deploy.ps1
 ```
 
-기존 사용자 변경이나 분기가 있으면 중단하고 보존한다. origin/main은 마지막 GitHub 조회 상태이므로
-bundle 반영 후 로컬 main보다 뒤에 있을 수 있다. 서버의 설정/환경 파일은 각 PC와 별도 관리한다.
-환경을 바꾸면 브라우저 코드에 공개 설정이 포함되므로 반드시 다시 빌드/배포한다.
+dirty worktree나 분기가 있으면 강제로 덮어쓰지 않습니다. GitHub push는 별도 승인 없이는 하지 않습니다. deploy는 npm ci → production build → 별도 release → 13000 후보 health → active 전환 → 3000 health 순서입니다. 실패 시 이전 release로 복구하며 기존 파일은 보존합니다. 포트 3000/13000은 공개하지 않습니다. 문서만 바뀌면 source/bundle만 동기화하고 앱을 재시작하지 않습니다.
 
-## 이전 버전 복구
+## 배포 후 확인
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File deploy\windows\rollback.ps1
+Get-Content C:/Services/chi-hub-runtime/active.txt
+Get-ScheduledTask -TaskName CHI-HUB-App,CHI-HUB-Trash
+Get-Service CHI-HUB-Caddy
 Invoke-RestMethod http://127.0.0.1:3000/api/health
+Invoke-RestMethod https://chitoolbox.com/api/health
+git bundle create C:/Services/chi-toolbox-windows.bundle main
 ```
 
-DB 변경을 되돌리는 기능은 아니다. 이번 전환은 DB/schema를 변경하지 않는다.
+health는 프로세스 생존 확인이며 DB/Auth/Storage 전체 검증은 아닙니다. 미인증 API가 401인지, login/manifest가 정상인지 확인합니다. 실제 사용자 계정 흐름은 별도 확인합니다. 예약 worker를 smoke 목적으로 실행하지 않습니다(만료 자료를 실제 삭제함).
 
-## 검증과 제한
+## 새 PC 인수인계
 
-- `npm audit` 0건, TypeScript 검사 및 Node standalone 빌드/HTTP smoke 확인.
-- 전체 lint는 기존 UI/API의 8개 진단이 남아 있으며 이번 호스팅 전환 범위에 포함하지 않는다.
-- `scripts/smoke-server.mjs`는 dummy Supabase 설정으로 빌드한 로컬 산출물에만 사용한다.
-  실제 데이터 변경 없이 화면/asset, 인증 차단, legacy redirect, HTTPS proxy callback을 검사한다.
-- 이전 esbuild/sharp/workerd 설치 스크립트 안내는 해당 Cloudflare 의존성이 제거되어 더 이상 적용되지 않는다.
-- 계정별 RLS와 앱 로그인은 유지된다. Sites의 별도 owner-only 접근 관문은 새 도메인에 적용되지 않는다.
-  Supabase 신규 가입 허용 여부는 운영자가 기존 프로젝트의 Auth 설정에서 관리한다.
+GitHub가 아직 push 전이면 서버 bundle이 최신 소스입니다.
 
-## 2026-09-16 서버 적용 상태
+```powershell
+scp chi-server:C:/Services/chi-toolbox-windows.bundle ./chi-toolbox-windows.bundle
+git clone -b main ./chi-toolbox-windows.bundle chi-toolbox
+Set-Location chi-toolbox
+git remote set-url origin https://github.com/ClCl616/chi-toolbox.git
+npm.cmd ci
+```
 
-- 운영 앱: 3edc62f 소스로 빌드/설치, CHI-HUB-App 실행 중, loopback health 확인.
-- 서버 npm audit 0건. Supabase Auth 설정 조회 HTTP 200. 실제 사용자 로그인은 아직 미검증.
-- Caddy 2.11.4 설치/설정 검증 완료, 서비스 자동 시작/복구 설정 완료, 현재 실행 중.
-- Windows 방화벽 CHI-HUB-Web: Caddy 프로그램에만 TCP 80/443 inbound 허용.
-- 공유기 포트포워딩 완료. chitoolbox.com 공개 HTTPS/HTTP 308, health/login/manifest/공유 이미지 200과 callback 복귀 확인. Supabase URL 설정 사용자 완료 확인, 실제 로그인/재부팅은 후속 검증 필요.
-- 서버 별도 validation-source/runtime에 dummy 테스트 빌드가 남아 있다. validation task와 프로세스는 제거했다. 실제 키/운영 데이터는 테스트에 사용하지 않았다.
+환경 파일·SSH/Tailscale 인증은 별도 준비합니다. 이전 chi-hub-windows.bundle이 남아 있더라도 이름만 보고 최신으로 판단하지 않습니다.
 
-## 새 도메인 전환
+## 복구·최초 설치
 
-이전 chi-hub.kro.kr은 공유 등록 도메인 kro.kr의 인증서 발급 한도로 HTTPS 연결을 완료하지 못했다. 사용자 결정으로 chitoolbox.com으로 전환한다. 루트 A 레코드 연결, Supabase Site URL/Redirect URLs 사용자 설정 완료. 서버 환경 파일의 사이트 URL 수정·재빌드와 Caddyfile 검증·반영 및 공개 HTTPS 확인 완료. 현재 상태는 CODEX_CONTEXT.md 참고.
+`rollback.ps1`은 previous.txt의 앱 release를 복구합니다. DB rollback은 아닙니다. 중지는 PID·시작 시각·경로를 검증하는 `stop-app.ps1`을 사용합니다. 소스 파일만 되돌려도 실행 중 release는 바뀌지 않습니다.
 
-브랜드는 CHI Toolbox이며 서버 경로/작업 이름은 기존 chi-hub/CHI-HUB를 유지한다.
+새 Windows 서버에서만 관리자 PowerShell로 deploy → install-app-task를 실행합니다. Caddy installer는 checksum과 구성을 검증하고 자동 시작 서비스를 만듭니다. DNS와 공유기 TCP 80/443, 방화벽 설정을 확인한 뒤 서비스를 시작합니다. 기존 운영에서는 설치 스크립트를 반복하지 않습니다. 새로운 배치 경로를 선택하면 production.psd1뿐 아니라 Caddyfile·worker 환경 경로·작업 인수·ACL까지 함께 검토해야 합니다.
 
-## 2026-09-22 UI 개편과 휴지통 배포
+Google OAuth 운영 및 localhost/127.0.0.1 `/auth/callback`을 유지합니다. 공인 IP 변경 시 DNS를 갱신해야 하며 자동 갱신은 미구현입니다. 로그와 오래된 릴리스는 운영자가 보관 정책에 따라 관리합니다. 재부팅 복구 검사는 사용자의 작업 중단을 고려해 별도로 예약합니다.
 
-`20260922092822_drive_trash.sql`은 운영 Supabase에 적용 완료했다. 기존 사용자 파일을 이동·삭제하지 않았으며 기존 RLS를 유지한다. 이전 0001~0005는 DB에 존재하지만 Supabase migration history에 기록되어 있지 않으므로 **db push로 모두 재적용하지 않는다**.
+## DB와 maintenance
 
-2026-09-22 웹 릴리스 `20260922-184026-884-6cd7d0c483e2` 배포, Caddy 설정 validate/reload, CHI-HUB-Trash 등록과 최초 실행 결과 0 확인 완료. 휴지통 UI와 자동 정리 모두 운영 반영됐다. 아래는 새 서버에서 재구성할 때의 절차다.
+기존 0001~0005는 운영 테이블에 반영됐으나 migration history에는 없다는 이전 확인 기록이 있습니다. 전체 db push 재적용을 금지합니다. 새 schema만 새 migration으로 추가하고 실제 이력/RLS/권한을 확인합니다.
 
-1. 검증된 커밋을 기존 bundle/SSH 절차로 전달하고 `deploy.ps1`로 앱을 배포한다.
-2. 저장소의 Caddyfile을 운영 경로로 복사하기 전 기존 설정을 백업하고 `caddy validate` 후 reload한다. 추가된 보안 헤더를 공개 HTTPS 응답에서 확인한다.
-3. `C:\Services\chi-hub-maintenance\trash.env`를 서버에만 만든다. 키 이름은 `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`이며 실제 값은 관리자에게 안전한 경로로 입력받는다. 이 파일은 앱 `.env.local`과 다르며 release/Git에 복사하지 않는다.
-4. maintenance 폴더의 상속 ACL을 제거하고 관리자·배포 사용자·SYSTEM에 제어권, NETWORK SERVICE에 읽기 권한만 부여한다. 정리 작업은 웹 앱(LOCAL SERVICE)과 별도 계정인 NETWORK SERVICE로 실행한다. NETWORK SERVICE에는 소스의 scripts 및 node_modules 읽기/실행 권한도 필요하다. 일반 사용자/Everyone의 키 읽기 권한이 없는지 확인한다.
-5. 관리자 PowerShell에서 `deploy/windows/install-trash-task.ps1` 실행. `CHI-HUB-Trash`는 서버 현지 시각 매일 04:00에 실행하며, 중단된 실행은 복구 후 실행하고 실패는 20분 간격으로 재시도한다.
-6. 최초 실행은 키/권한을 검증한 뒤 `Start-ScheduledTask -TaskName CHI-HUB-Trash`로 수행하고 `Get-ScheduledTaskInfo`의 결과 0을 확인한다. 실행은 실제 30일 만료 파일을 영구 삭제하므로 날짜를 앞당기거나 사용자 파일로 인위적인 만료 테스트를 하지 않는다.
-
-30일은 삭제 시각부터 계산한다. 기한이 지나면 복원이 차단되고 다음 일일 작업에서 바이트와 메타데이터를 삭제한다. 정리 작업이 중지돼 있으면 만료 파일은 영구 삭제 대기 상태로 남는다. UI/서명 URL만 숨기고 Storage 바이트를 남겨두는 방식이 아니다. Storage API 삭제 성공 후 DB 행을 지우며, 중간 실패는 15분 뒤 다시 claim할 수 있다.
-
-현재 PC의 `chi-server` 별칭과 공개 키 인증을 구성했다. 키 설정은 서버의 숨김 입력을 사용했으며 채팅/소스/로그에 실제 값을 기록하지 않았다. maintenance/trash.env의 상속 ACL을 제거하고 관리자·배포 사용자·SYSTEM·NETWORK SERVICE만 허용했다. 작업은 매일 04:00 실행하며 최초 검증 후 다음 실행은 2026-09-23 04:00이다.
-
-## UI 회귀 검사
-
-`playwright`는 devDependency다. `npx playwright install chromium`으로 브라우저를 준비하거나 Windows의 Edge를 `TEST_BROWSER=msedge`로 선택한다.
-
-dummy 환경 변수로 로컬 dev 서버를 127.0.0.1:13002에서 실행한 뒤 `node scripts/test-workspaces.mjs`를 실행한다. API를 모두 가로채므로 운영 데이터를 변경하지 않는다. 캡처는 `work/qa`에 생성되며 커밋하지 않는다. `TEST_BASE_URL`은 localhost/127.0.0.1 주소만 허용한다.
-
-`node --test scripts/trash-worker.test.mjs`는 삭제 순서와 실패 처리를 mock으로 확인한다. `scripts/test-trash.sql`은 DB transaction 안에서 실행한 뒤 rollback하며 사용자 파일 대신 temporary table만 사용한다.
+정리 순서는 Storage API 바이트 삭제 → DB 파일 메타데이터 → 빈 만료 폴더 → 만료 메모입니다. service_role은 서버 worker에만 둡니다. 휴지통은 30일 보관하며 백업을 대신하지 않습니다. tests/database SQL은 명시적인 rollback 조건을 이해한 후에만 수동 실행합니다.

@@ -1,8 +1,8 @@
 import type { MetadataRoute } from 'next';
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'CHI Toolbox',
-    short_name: 'CHI Toolbox',
+    name: 'Chi Toolbox',
+    short_name: 'Chi Toolbox',
     description: '모든 것을 한 곳에서. 편리하게.',
     start_url: '/',
     display: 'standalone',

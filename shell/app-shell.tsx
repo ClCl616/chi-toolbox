@@ -1,0 +1,192 @@
+'use client';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { WorkspacePreferencesProvider } from '@/shared/preferences/use-workspace-preferences';
+import { WorkspaceStatus } from '@/shell/workspace-status';
+import { WorkspaceShortcuts } from '@/shell/workspace-shortcuts';
+import { Tabs as TabsPrimitive } from '@base-ui/react/tabs';
+import { DesktopNavigation } from '@/shell/navigation/desktop-navigation';
+import {
+  MobileHeader,
+  MobileBottomNavigation,
+} from '@/shell/navigation/mobile-navigation';
+
+import { workspaces as navigation } from './workspaces';
+const viewChanged = 'chi-hub-view-changed';
+function subscribeToView(onChange: () => void) {
+  window.addEventListener(viewChanged, onChange);
+  window.addEventListener('popstate', onChange);
+  window.addEventListener('hashchange', onChange);
+  return () => {
+    window.removeEventListener(viewChanged, onChange);
+    window.removeEventListener('popstate', onChange);
+    window.removeEventListener('hashchange', onChange);
+  };
+}
+function getViewSnapshot() {
+  const url = new URL(window.location.href);
+  const value = url.searchParams.get('view') ?? url.hash.slice(1);
+  return navigation.some((item) => item.id === value) ? value : 'focus';
+}
+function getServerViewSnapshot() {
+  return 'focus';
+}
+function selectView(value: unknown) {
+  if (
+    typeof value !== 'string' ||
+    !navigation.some((item) => item.id === value)
+  )
+    return;
+  const url = new URL(window.location.href);
+  url.searchParams.set('view', value);
+  url.hash = '';
+  if (url.href !== window.location.href)
+    window.history.pushState(null, '', url);
+  window.dispatchEvent(new Event(viewChanged));
+  window.scrollTo({ top: 0 });
+}
+const sidebarStorageKey = 'chi-hub-sidebar';
+const sidebarChangeEvent = 'chi-hub-sidebar-change';
+function subscribeToSidebar(onChange: () => void) {
+  window.addEventListener(sidebarChangeEvent, onChange);
+  return () => window.removeEventListener(sidebarChangeEvent, onChange);
+}
+function getSidebarSnapshot() {
+  return window.localStorage.getItem(sidebarStorageKey) !== 'collapsed';
+}
+function getServerSidebarSnapshot() {
+  return true;
+}
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <WorkspacePreferencesProvider>
+      <AppShellContent>{children}</AppShellContent>
+    </WorkspacePreferencesProvider>
+  );
+}
+function AppShellContent({ children }: { children: React.ReactNode }) {
+  const activeView = useSyncExternalStore(
+    subscribeToView,
+    getViewSnapshot,
+    getServerViewSnapshot,
+  );
+  const sidebarExpanded = useSyncExternalStore(
+    subscribeToSidebar,
+    getSidebarSnapshot,
+    getServerSidebarSnapshot,
+  );
+  const [authState, setAuthState] = useState<'checking' | 'ready' | 'offline'>(
+    'checking',
+  );
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const legacyView = url.hash.slice(1);
+    if (
+      !url.searchParams.has('view') &&
+      navigation.some((item) => item.id === legacyView)
+    ) {
+      url.searchParams.set('view', legacyView);
+      url.hash = '';
+      window.history.replaceState(null, '', url);
+      window.dispatchEvent(new Event(viewChanged));
+    }
+  }, []);
+  useEffect(() => {
+    fetch('/api/auth/status', { cache: 'no-store' })
+      .then((response) => {
+        if (response.status === 401) {
+          const url = new URL(window.location.href);
+          window.location.href =
+            '/login?returnTo=' +
+            encodeURIComponent(url.pathname + url.search + url.hash);
+          return;
+        }
+        setAuthState(response.ok ? 'ready' : 'offline');
+      })
+      .catch(() => setAuthState('offline'));
+  }, []);
+  function toggleSidebar() {
+    window.localStorage.setItem(
+      sidebarStorageKey,
+      sidebarExpanded ? 'collapsed' : 'expanded',
+    );
+    window.dispatchEvent(new Event(sidebarChangeEvent));
+  }
+  async function logout() {
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
+    window.location.href = '/login';
+  }
+  const navigationProps = {
+    navigation,
+    authState,
+    logout,
+    activeView,
+    selectView,
+    toggleSidebar,
+  };
+  const title = navigation.find((item) => item.id === activeView)?.label;
+  return (
+    <TabsPrimitive.Root
+      value={activeView}
+      onValueChange={selectView}
+      orientation="vertical"
+      className={
+        'app-shell workspace-tabs' +
+        (sidebarExpanded ? '' : ' sidebar-collapsed')
+      }
+    >
+      <a className="skip-content" href="#workspace">
+        본문으로 건너뛰기
+      </a>
+      <DesktopNavigation {...navigationProps} />
+      <MobileHeader {...navigationProps} />
+      <header className="workspace-topbar">
+        <div className="workspace-identity">
+          <span className="workspace-avatar">C</span>
+          <div>
+            <strong>내 워크스페이스</strong>
+            <span className={`connection-state ${authState}`}>
+              {authState === 'ready'
+                ? '연결됨'
+                : authState === 'checking'
+                  ? '연결 확인 중'
+                  : '데이터 연결 필요'}
+            </span>
+          </div>
+        </div>
+        {authState !== 'checking' && <WorkspaceStatus />}
+        <time>
+          {new Intl.DateTimeFormat('ko-KR', {
+            month: 'long',
+            day: 'numeric',
+            weekday: 'short',
+          }).format(new Date())}
+        </time>
+      </header>
+      <main className="main-content" id="workspace" tabIndex={-1}>
+        {authState === 'checking' ? (
+          <output className="auth-check">내 공간을 불러오는 중…</output>
+        ) : (
+          <>
+            {authState === 'offline' && (
+              <output className="service-banner">
+                데이터 연결을 확인해주세요. 일부 기능이 제한될 수 있습니다.
+              </output>
+            )}
+            <div className="tab-workspace">
+              <header className="tab-heading">
+                <h1>{title}</h1>
+              </header>
+              <WorkspaceShortcuts
+                navigation={navigation}
+                selectView={selectView}
+              />
+              {children}
+            </div>
+          </>
+        )}
+      </main>
+      <MobileBottomNavigation {...navigationProps} />
+    </TabsPrimitive.Root>
+  );
+}

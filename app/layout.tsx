@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import './globals.css';
-import './dashboard.css';
-import './workspace.css';
-import './desktop.css';
-import './mobile.css';
-import './enhancements.css';
-import './productivity.css';
-import { PwaRegister } from '@/components/pwa-register';
+import '@/styles/globals.css';
+import '@/styles/shell.css';
+import '@/styles/collections.css';
+import '@/styles/desktop.css';
+import '@/styles/mobile.css';
+import '@/styles/editors.css';
+import '@/styles/interaction.css';
+import { PwaRegister } from '@/shell/pwa-register';
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
@@ -16,19 +16,19 @@ const geistMono = Geist_Mono({
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: { default: 'CHI Toolbox', template: '%s · CHI Toolbox' },
+  title: { default: 'Chi Toolbox', template: '%s · Chi Toolbox' },
   description: '모든 것을 한 곳에서. 편리하게.',
   manifest: '/manifest.webmanifest',
   openGraph: {
-    title: 'CHI Toolbox',
+    title: 'Chi Toolbox',
     description: '모든 것을 한 곳에서. 편리하게.',
     images: [
-      { url: '/og-toolbox.png', width: 1731, height: 909, alt: 'CHI Toolbox' },
+      { url: '/og-toolbox.png', width: 1731, height: 909, alt: 'Chi Toolbox' },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CHI Toolbox',
+    title: 'Chi Toolbox',
     description: '모든 것을 한 곳에서. 편리하게.',
     images: ['/og-toolbox.png'],
   },

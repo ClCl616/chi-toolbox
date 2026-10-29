@@ -1,43 +1,53 @@
-# CHI Toolbox
+# Chi Toolbox
 
-한국어 모바일 우선 개인용 PWA. 집중 타이머, 루틴·할 일, 캘린더, 수면, 운동, 메모, 비공개 드라이브, 대전대학교 학식을 제공합니다.
+한국어 개인용 PWA. 타이머, 루틴·할 일, 캘린더, 메모, 복습·학습, 수면, 운동, 비공개 드라이브, 대전대학교 학식과 프로필·설정을 제공합니다.
 
-## 실행 환경
+## 시작
 
-- Node.js 24 LTS (`>=24.13.0 <25`), npm, Git
-- React 19.2.8, Vinext 1.0.0-beta.10, Vite 8.3.0
-- Supabase Auth / PostgreSQL / Storage, migration 0001~0005
-- Windows Node.js standalone 운영, Caddy HTTPS
-
-## 로컬 개발
+Node 24 LTS (`>=24.13.0 <25`), npm, Git이 필요합니다.
 
 ```powershell
+git clone https://github.com/ClCl616/chi-toolbox.git
+Set-Location chi-toolbox
 npm.cmd ci
 Copy-Item .env.example .env.local
 npm.cmd run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
-이미 `.env.local`이 있으면 복사하지 않습니다. 파일에 기존 Supabase 프로젝트의 공개 설정을 입력합니다.
-로컬도 운영 데이터에 연결되므로 CRUD 테스트는 실제 데이터를 변경합니다.
-Supabase 서비스 역할 키는 사용하지 않습니다. 기존 프로젝트에 migration을 임의 재적용하지 않습니다.
+기존 `.env.local`은 덮어쓰지 않습니다. `.env.example`의 공개 Supabase URL/anon key/site URL을 설정합니다. 앱에 service_role/secret key를 넣지 않습니다. 로컬도 운영 DB에 연결되므로 CRUD는 실제 데이터를 변경합니다.
 
-## 검증 및 production 실행
+## 구조
+
+- `app/`: URL 진입점·레이아웃·얇은 API export
+- `shell/`: 화면 조합과 탐색; 새 화면 등록은 `workspaces.ts`
+- `features/`: 기능별 화면·훅·모델·서버 로직
+- `shared/`: 기능 독립 공통 UI·훅·유틸리티·서버 인증
+- `styles/`, `tests/`, `scripts/`, `supabase/migrations/`, `deploy/windows/`
+
+의존 방향, 이름 규칙, 기능 추가 절차와 설계 근거는 [아키텍처](docs/ARCHITECTURE.md)를 읽습니다. React + Vinext/Vite 기반이며 Next.js 방식의 라우트를 사용합니다.
+
+## 데이터에 쓰지 않는 검증
 
 ```powershell
+npm.cmd run check
+npm.cmd run build:test
+npm.cmd run test:smoke
+$env:TEST_BROWSER='msedge'
+npm.cmd run test:browser
 npm.cmd audit
-npm.cmd run typecheck
-npm.cmd run build
-npm.cmd start
+git diff --check
 ```
 
-빌드 전에 `.env.local`이 필요합니다. 시작은 127.0.0.1:3000으로 제한됩니다.
-`npm.cmd run lint`에는 기존 8개 진단이 남아 있습니다. 상세 내용은 CODEX_CONTEXT.md를 확인합니다.
+`check`는 구조 경계·타입·lint·단위 테스트를 실행합니다. 테스트 빌드는 dummy 환경을 사용합니다. 브라우저 검사는 로컬 서버를 자동 시작/종료하고 API를 mock합니다. Edge가 없으면 `npx.cmd playwright install chromium` 후 TEST_BROWSER를 `chromium`으로 설정합니다. 캡처는 Git 제외 `work/qa/`에 남습니다. DB SQL 검사는 기본 검사에 포함하지 않습니다.
 
-## 운영
+실제 설정의 production 빌드·실행은 `npm.cmd run build`, `npm.cmd start`입니다. 앱은 loopback만 수신합니다. 테스트 산출물을 운영에 복사하지 않습니다.
 
-운영 대상은 집의 Windows PC, 주소는 https://chitoolbox.com 입니다.
-개발은 여러 PC에서 하고, 검증된 커밋만 서버에 전달합니다. GitHub push는 사용자 요청 시 수행합니다.
-Tailscale/SSH는 관리용이며 서비스 사용자는 도메인으로 접속합니다.
+## 운영과 인수인계
 
-설치·자동 시작·릴리스 전환·복구·HTTPS 절차는 [Windows 운영 안내](deploy/windows/README.md)를 따릅니다.
-기존 Sites 배포는 중단했으며 `.openai/hosting.json`은 과거 연결 기록입니다.
+- 운영 주소: https://chitoolbox.com — Windows + Caddy HTTPS.
+- [운영 배포·복구](deploy/windows/README.md)
+- [현재 상태·남은 확인](CODEX_CONTEXT.md)
+- [보안·모바일 확장](docs/SECURITY_AND_APPS.md)
+- [작업 규칙](AGENTS.md)
+
+GitHub 저장소 이름 변경은 완료했습니다. 이번 구조 개편 커밋은 **별도 push 승인 전까지 로컬/서버 bundle에만 있습니다**. GitHub clone이 최신 배포와 같은지 커밋을 대조하고, 필요하면 서버 bundle로 복원합니다. GitHub push는 명시적 요청 시에만 수행합니다.

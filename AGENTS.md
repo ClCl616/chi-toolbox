@@ -2,6 +2,12 @@
 
 이 파일의 규칙은 이 저장소 전체에 적용한다.
 
+## 구조와 이름
+
+- 논리 프로젝트·패키지·GitHub 저장소 이름은 `chi-toolbox`다. 기존 운영 경로·서비스·브라우저 저장 키는 호환 식별자로 유지하며 이름만 보고 일괄 치환하지 않는다.
+- `docs/ARCHITECTURE.md`의 의존 경계와 파일 추가 기준을 따른다. `app`은 진입점, `features`는 기능, `shared`는 공통, `shell`은 조합이다.
+- 변경 검증의 기본 명령은 `npm.cmd run check`다. 동작 변경은 dummy production build와 관련 HTTP/browser 검사를 추가한다. DB SQL 검사는 기본 검사와 분리한다.
+
 ## 작업 시작 시 컨텍스트 복원
 
 - 새 작업을 시작할 때 프로젝트 루트에 `CODEX_CONTEXT.md`가 있으면 먼저 끝까지 읽고 이전 작업 상태를 파악한다.

@@ -1,9 +1,12 @@
 # Run once in an elevated PowerShell after deploy.ps1 has prepared a release.
-param([string]$RuntimeRoot = 'C:\Services\chi-hub-runtime', [string]$TaskName = 'CHI-HUB-App')
+param([string]$RuntimeRoot, [string]$TaskName)
+$production = Import-PowerShellDataFile (Join-Path $PSScriptRoot 'production.psd1')
+if (-not $RuntimeRoot) { $RuntimeRoot = $production.RuntimeRoot }
+if (-not $TaskName) { $TaskName = $production.TaskName }
 $ErrorActionPreference = 'Stop'
 if (-not (Test-Path (Join-Path $RuntimeRoot 'active.txt'))) { throw 'Run deploy.ps1 first.' }
 if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
-    throw 'CHI-HUB-App already exists. Use deploy.ps1 to update the release.'
+    throw "$TaskName already exists. Use deploy.ps1 to update the release."
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'run-app.ps1') -Destination $RuntimeRoot
 $runner = Join-Path $RuntimeRoot 'run-app.ps1'
@@ -20,4 +23,4 @@ New-Item -ItemType Directory -Force $logDir | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Could not grant log write access.' }
 Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal | Out-Null
 Start-ScheduledTask -TaskName $taskName
-Write-Output 'CHI-HUB-App registered and started; check /api/health and runtime logs.'
+Write-Output "$TaskName registered and started; check /api/health and runtime logs."

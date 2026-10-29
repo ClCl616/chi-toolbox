@@ -1,0 +1,14 @@
+import { NextResponse } from 'next/server';
+import { createClient } from '@/shared/server/server';
+export async function POST() {
+  try {
+    const supabase = await createClient();
+    await supabase.auth.signOut();
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json(
+      { message: '로그아웃하지 못했습니다.' },
+      { status: 500 },
+    );
+  }
+}

@@ -9,6 +9,7 @@ const base = `http://127.0.0.1:${port}`;
 const child = spawn(process.execPath, ['scripts/start-server.mjs'], {
   env: {
     ...process.env,
+    CHI_TOOLBOX_TEST: '1',
     PORT: port,
     NEXT_PUBLIC_SUPABASE_URL: 'https://smoke-test.invalid',
     NEXT_PUBLIC_SUPABASE_ANON_KEY: 'smoke-test-anon-key',
@@ -48,6 +49,31 @@ try {
   );
   assert.equal((await fetch(`${base}/api/auth/status`)).status, 401);
   assert.equal((await fetch(`${base}/api/files`)).status, 401);
+  // Exercise every protected route export after moving handlers out of app/.
+  const protectedRoutes = {
+    notes: ['GET', 'POST', 'PATCH', 'DELETE'],
+    files: ['GET', 'POST', 'PATCH', 'DELETE'],
+    folders: ['GET', 'POST', 'PATCH', 'DELETE'],
+    routines: ['GET', 'POST', 'PATCH', 'DELETE'],
+    'daily-tasks': ['GET', 'POST', 'PATCH', 'DELETE'],
+    'calendar-events': ['GET', 'POST', 'PATCH', 'DELETE'],
+    calendar: ['GET'],
+    study: ['GET', 'POST', 'PATCH'],
+    'focus-sessions': ['GET', 'POST', 'DELETE'],
+    'sleep-logs': ['GET', 'POST', 'PATCH', 'DELETE'],
+    workouts: ['GET', 'POST', 'DELETE'],
+    preferences: ['GET', 'PATCH'],
+    profile: ['GET', 'PATCH'],
+  };
+  for (const [route, methods] of Object.entries(protectedRoutes)) {
+    for (const method of methods) {
+      assert.equal(
+        (await fetch(`${base}/api/${route}`, { method })).status,
+        401,
+        `${method} ${route} requires authentication`,
+      );
+    }
+  }
   for (const path of [
     '/api/study',
     '/api/preferences',
@@ -98,6 +124,9 @@ try {
   console.log(
     'PASS: production SSR, assets, auth guards, redirects, trusted proxy and open-redirect checks.',
   );
+} catch (error) {
+  console.error(output);
+  throw error;
 } finally {
   if (child.exitCode === null) {
     const exited = once(child, 'exit');
