@@ -51,7 +51,7 @@
 ## 운영·DB
 
 - 운영은 집 Windows, chitoolbox.com, loopback 127.0.0.1:3000 + Caddy HTTPS. Tailscale/SSH는 관리 전용. Sites는 사용하지 않는다.
-- 이번 시작 시 서버 소스는 3b1036a, clean, 앱 실행 빌드는 565f0a6이었다. CHI-HUB-App Running, CHI-HUB-Trash Ready를 읽기 전용으로 확인했다. 개편 배포 결과는 아래 최종 기록으로 갱신한다.
+- 2026-10-29 개편 실행 빌드: 44fc69a. 실행 릴리스: C:/Services/chi-hub-runtime/releases/20261029-133952-290-44fc69a0d77f. 앱/Caddy Running, Trash Ready/최근 결과 0, 127.0.0.1:3000 수신, 후보 13000 종료 확인. source와 실행 빌드 사이의 후속 문서 커밋 차이는 정상이다.
 - 앱 공개 환경 키: NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY / NEXT_PUBLIC_SITE_URL. 공개 값도 build에 들어가므로 변경 시 재빌드한다.
 - worker 전용 SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY는 서버 보호 파일에만 둔다. NETWORK SERVICE와 앱 LOCAL SERVICE 권한 분리 유지.
 - worker는 서버 소스 scripts/purge-trash.mjs → trash-worker.mjs. 만료 파일 claim → Storage API 삭제 → DB metadata → 빈 만료 폴더 → 만료 메모 정리. 실패 시 재시도하며 SQL로 Storage 바이트를 직접 삭제하지 않는다.
@@ -68,9 +68,9 @@
 - 메모 200/파일 1000/폴더 5000 조회 상한, 전체 목록 페이지네이션 부족. Supabase 반환 상한도 별도 적용될 수 있다.
 - HTML Drag and Drop 기반이므로 모바일 터치 정렬 보장은 없다. 복잡한 Markdown 정규화, Tiptap 큰 chunk와 일부 CSS override는 남아 있다.
 - 공인 IP/DNS 자동 갱신, 로그·릴리스 보관 정책, 실제 재부팅 후 복구·사용자 로그인·백업 복구는 추가 확인 필요. 임의 재부팅하지 않는다.
-- 지금 작업은 구조 개편 검증 및 서버 전달 중이다. 완료 후 이 문구와 아래 기록을 최종 상태로 바꾼다.
+- 현재 진행 중인 구현은 없다. 구조 개편·검증·Windows 배포를 완료했다. GitHub origin push는 하지 않았고 원격 main은 3b1036a로 유지된다. 새 개발자는 최신 서버 bundle로 이 개편을 복원해야 한다.
 
 ## 최근 기록
 
-- 2026-10-29: 기능 중심 구조·개발 검사·문서 체계·의존성 정비, chi-toolbox 이름 및 GitHub 주소 통일. 최종 커밋/배포 기록은 완료 시 추가한다.
+- 2026-10-29 / 44fc69a: 기능 중심 구조·개발 검사·문서 체계·의존성 정비, chi-toolbox 이름 및 GitHub 주소 통일. check/단위 12개/build/전체 보호 API smoke/Edge 11화면×5너비 통과. Windows 배포 후 public health/login/manifest/메모·파일·프로필 200, 미인증 설정 GET·PATCH/프로필/메모 휴지통/다운로드 401. 로컬·서버 audit 0건. 후속 문서 커밋까지 source와 양쪽 chi-toolbox-windows.bundle을 동기화하며 앱 재시작은 하지 않는다.
 - 2026-09-29~30: 드래그·즐겨찾기·프로필/설정·학식/카드 UI 배포(565f0a6), 인수인계(3b1036a). 상세 과거 이력은 Git log를 따른다.
