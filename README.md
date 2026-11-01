@@ -18,7 +18,7 @@ npm.cmd run dev -- --hostname 127.0.0.1 --port 3000
 
 ## 구조
 
-새 MVP의 공통 UI와 빈 화면은 `/toolbox`에서 확인합니다. 기존 서비스는 `/`에 유지합니다. 아직 LMS·계정 데이터는 연결하지 않습니다. 카드는 자동 배치되며 많아지면 캔버스를 좌우로 스크롤합니다. [화면 경로·파일 소유권·검증](docs/UI_FOUNDATION.md)을 참고하세요.
+새 MVP는 `/toolbox`에서 확인합니다. 기존 서비스는 `/`에 유지합니다. 로컬 개인 계정용 LMS 피드·과제 수집 연결을 추가했으며 공개 사용자별 연결은 아직 제공하지 않습니다. 카드는 자동 배치되며 많아지면 캔버스를 좌우로 스크롤합니다. [화면 구조](docs/UI_FOUNDATION.md), [LMS 로그인·로컬 실행·검증](docs/LMS_LOCAL.md)을 참고하세요.
 
 - `app/`: URL 진입점·레이아웃·얇은 API export
 - `shell/`: 화면 조합과 탐색; 기존 기능은 `workspaces.ts`, 새 MVP는 `toolbox/`

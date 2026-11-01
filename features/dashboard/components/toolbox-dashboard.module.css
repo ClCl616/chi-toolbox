@@ -105,6 +105,23 @@
   color: #647b79;
   font-size: clamp(12px, 3cqw, 17px);
 }
+.numbers {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.systemCount {
+  color: #9e1231;
+  background: #fff2f4;
+  border-radius: 10px;
+  padding: 5px 9px;
+  font-size: 12px;
+}
+.systemCount strong {
+  margin-left: 4px;
+  font-size: 20px;
+}
 .card[data-card='news'] .status {
   color: #e0f6ed;
 }

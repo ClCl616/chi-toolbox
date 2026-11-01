@@ -8,6 +8,103 @@
   border-radius: 30px;
   padding: 7px 12px;
 }
+.systemCount {
+  color: #b42318;
+  font-size: 12px;
+  margin-left: 8px;
+}
+.error {
+  color: #a52525;
+  padding: 12px 16px;
+  background: #fff2ef;
+  border-radius: 12px;
+}
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.message,
+.systemMessage {
+  background: var(--tb-surface, #fff);
+  padding: 22px;
+  border: 1px solid var(--tb-border);
+  border-radius: 20px;
+}
+.systemMessage {
+  background: #fff6f3;
+  border-color: #eed1c9;
+}
+.feed header {
+  position: relative;
+  padding-right: 64px;
+}
+.feed h2,
+.assignmentGroups h3 {
+  font-size: 17px;
+  margin: 8px 0 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.meta,
+.feed time,
+.readState,
+.due,
+.emptyGroup {
+  color: var(--tb-muted);
+  font-size: 12px;
+}
+.readState {
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+.feed time {
+  display: block;
+  margin-top: 16px;
+}
+.feed summary {
+  cursor: pointer;
+  color: var(--tb-accent);
+  font-size: 13px;
+  width: fit-content;
+}
+.body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.assignmentGroups {
+  display: grid;
+  gap: 24px;
+}
+.assignmentGroups h2 {
+  font-size: 17px;
+  margin: 0 0 14px;
+}
+.assignmentGroups h2 span {
+  color: var(--tb-muted);
+  margin-left: 6px;
+}
+.assignmentGroups ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+.assignmentGroups li {
+  background: var(--tb-surface, #fff);
+  border: 1px solid var(--tb-border);
+  border-radius: 18px;
+  padding: 20px;
+}
+.emptyGroup {
+  padding: 12px 0;
+}
 .tabs {
   display: flex;
   gap: 12px;

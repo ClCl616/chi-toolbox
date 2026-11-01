@@ -18,8 +18,12 @@
     "test:smoke": "node scripts/smoke-server.mjs",
     "test:browser": "node scripts/run-browser-tests.mjs",
     "test:toolbox": "node scripts/run-browser-tests.mjs toolbox",
+    "test:lms": "node scripts/run-browser-tests.mjs lms",
     "build:test": "node scripts/build-test.mjs",
-    "preview:toolbox": "node scripts/preview-toolbox.mjs"
+    "preview:toolbox": "node scripts/preview-toolbox.mjs",
+    "lms:login": "node scripts/lms-worker.mjs --login",
+    "lms:watch": "node scripts/lms-worker.mjs",
+    "lms:once": "node scripts/lms-worker.mjs --once"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",

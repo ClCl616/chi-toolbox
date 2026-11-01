@@ -16,7 +16,17 @@ const cards = [
   },
 ];
 
-export function ToolboxDashboard() {
+export function ToolboxDashboard({
+  newsCount,
+  systemCount,
+  assignmentCount,
+  status,
+}: {
+  newsCount: number | null;
+  systemCount: number;
+  assignmentCount: number | null;
+  status: string;
+}) {
   const canvas = useRef<HTMLElement>(null);
   useEffect(() => {
     const element = canvas.current;
@@ -58,7 +68,7 @@ export function ToolboxDashboard() {
             href={href}
             className={styles.card}
             data-card={id}
-            aria-label={`${title} · 미연결`}
+            aria-label={`${title} · ${id === 'news' ? (newsCount ?? '미연결') : (assignmentCount ?? '미연결')}${id === 'news' && systemCount > 0 ? ` · 상태 알림 ${systemCount}` : ''}`}
           >
             <h2>{title}</h2>
             <Icon
@@ -67,10 +77,17 @@ export function ToolboxDashboard() {
               aria-hidden="true"
             />
             <div className={styles.metric}>
-              <span className={styles.value} aria-label="집계되지 않음">
-                —
-              </span>
-              <span className={styles.status}>미연결</span>
+              <div className={styles.numbers}>
+                <span className={styles.value}>
+                  {(id === 'news' ? newsCount : assignmentCount) ?? '—'}
+                </span>
+                {id === 'news' && systemCount > 0 && (
+                  <span className={styles.systemCount}>
+                    상태 알림 <strong>{systemCount}</strong>
+                  </span>
+                )}
+              </div>
+              <span className={styles.status}>{status}</span>
             </div>
           </Link>
         ))}

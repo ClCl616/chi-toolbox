@@ -18,6 +18,11 @@ try {
     serviceWorkers: 'block',
   });
   await context.route('**/api/**', (route) => {
+    if (
+      new URL(route.request().url()).pathname === '/api/toolbox/lms' &&
+      route.request().method() === 'GET'
+    )
+      return route.continue();
     apiRequests.push(route.request().url());
     return route.abort();
   });
@@ -151,7 +156,7 @@ try {
   assert.deepEqual(apiRequests, []);
   assert.deepEqual(errors, []);
   console.log(
-    'PASS: 4 routes, 8 viewport sizes, 1–16 cards, no vertical scroll, wheel and focus navigation, no API calls.',
+    'PASS: 4 routes, 8 viewport sizes, 1–16 cards, no vertical scroll, wheel and focus navigation, only LMS read API.',
   );
 } finally {
   await browser.close();

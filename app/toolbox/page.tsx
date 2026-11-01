@@ -1,5 +1,5 @@
-import { ToolboxDashboard } from '@/features/dashboard/components/toolbox-dashboard';
+import { ToolboxHome } from '@/shell/toolbox/toolbox-home';
 
 export default function ToolboxPage() {
-  return <ToolboxDashboard />;
+  return <ToolboxHome />;
 }
