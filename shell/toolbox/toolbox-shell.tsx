@@ -49,7 +49,6 @@ export function ToolboxShell({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <div className={styles.sidebarNote}>나의 하루를 한곳에서.</div>
       </aside>
       <main id="toolbox-content" tabIndex={-1} className={styles.content}>
         {children}

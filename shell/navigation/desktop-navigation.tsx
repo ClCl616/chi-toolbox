@@ -16,9 +16,7 @@ export function DesktopNavigation({
         <div className="sidebar-brand-row">
           <div className="brand">
             <span className="brand-mark">C</span>
-            <span>
-              CHI TOOLBOX<small>모든 것을 한 곳에서. 편리하게.</small>
-            </span>
+            <span>CHI TOOLBOX</span>
           </div>
           <button
             aria-label="사이드바 접기"

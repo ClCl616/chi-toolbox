@@ -95,11 +95,6 @@ html:has(.shell) {
 .navItem:last-child {
   margin-top: auto;
 }
-.sidebarNote {
-  color: var(--tb-muted);
-  font-size: 11px;
-  margin: 20px 18px 0;
-}
 .content {
   max-width: 1720px;
   margin-left: 240px;
@@ -163,9 +158,6 @@ html:has(.shell) {
   .navItem:last-child {
     margin: 0;
   }
-  .sidebarNote {
-    display: none;
-  }
   .content {
     margin: 0;
     padding: 30px 22px calc(112px + env(safe-area-inset-bottom));
@@ -175,5 +167,28 @@ html:has(.shell) {
   .content {
     padding-left: 16px;
     padding-right: 16px;
+  }
+}
+.content:has([data-dashboard]) {
+  height: 100dvh;
+  max-width: none;
+  padding: 32px 32px 24px;
+}
+.shell:has([data-dashboard]) {
+  background:
+    radial-gradient(ellipse at top left, #fbf5cf55, transparent 60%),
+    radial-gradient(ellipse at bottom right, #c8f2f666, transparent 60%),
+    #f6f9fa;
+}
+@media (max-width: 820px) {
+  .content:has([data-dashboard]) {
+    height: calc(100dvh - 71px - 75px - env(safe-area-inset-bottom));
+    padding: 20px 16px 8px;
+  }
+}
+@media (max-height: 600px) {
+  .content:has([data-dashboard]) {
+    padding-top: 12px;
+    padding-bottom: 8px;
   }
 }

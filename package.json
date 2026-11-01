@@ -18,7 +18,8 @@
     "test:smoke": "node scripts/smoke-server.mjs",
     "test:browser": "node scripts/run-browser-tests.mjs",
     "test:toolbox": "node scripts/run-browser-tests.mjs toolbox",
-    "build:test": "node scripts/build-test.mjs"
+    "build:test": "node scripts/build-test.mjs",
+    "preview:toolbox": "node scripts/preview-toolbox.mjs"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",

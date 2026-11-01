@@ -30,7 +30,7 @@ export function ToolboxState({
 }: {
   kind: 'empty' | 'unconnected' | 'loading' | 'error';
   title: string;
-  children: ReactNode;
+  children?: ReactNode;
   action?: ReactNode;
 }) {
   const Icon = {
@@ -50,7 +50,7 @@ export function ToolboxState({
         <Icon size={26} aria-hidden="true" />
       </span>
       <h2>{title}</h2>
-      <p>{children}</p>
+      {children && <p>{children}</p>}
       {action}
     </div>
   );

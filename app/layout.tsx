@@ -17,11 +17,11 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: { default: 'Chi Toolbox', template: '%s · Chi Toolbox' },
-  description: '모든 것을 한 곳에서. 편리하게.',
+  description: '개인 도구 대시보드',
   manifest: '/manifest.webmanifest',
   openGraph: {
     title: 'Chi Toolbox',
-    description: '모든 것을 한 곳에서. 편리하게.',
+    description: '개인 도구 대시보드',
     images: [
       { url: '/og-toolbox.png', width: 1731, height: 909, alt: 'Chi Toolbox' },
     ],
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Chi Toolbox',
-    description: '모든 것을 한 곳에서. 편리하게.',
+    description: '개인 도구 대시보드',
     images: ['/og-toolbox.png'],
   },
 };

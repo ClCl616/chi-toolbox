@@ -18,7 +18,7 @@ npm.cmd run dev -- --hostname 127.0.0.1 --port 3000
 
 ## 구조
 
-새 MVP의 공통 UI와 빈 화면은 `/toolbox`에서 확인합니다. 기존 서비스는 `/`에 유지합니다. 아직 LMS·계정 데이터는 연결하지 않으며, 카드 설정만 이 브라우저에 저장합니다. [화면 경로·파일 소유권·검증](docs/UI_FOUNDATION.md)을 참고하세요.
+새 MVP의 공통 UI와 빈 화면은 `/toolbox`에서 확인합니다. 기존 서비스는 `/`에 유지합니다. 아직 LMS·계정 데이터는 연결하지 않습니다. 카드는 자동 배치되며 많아지면 캔버스를 좌우로 스크롤합니다. [화면 경로·파일 소유권·검증](docs/UI_FOUNDATION.md)을 참고하세요.
 
 - `app/`: URL 진입점·레이아웃·얇은 API export
 - `shell/`: 화면 조합과 탐색; 기존 기능은 `workspaces.ts`, 새 MVP는 `toolbox/`
@@ -53,4 +53,4 @@ git diff --check
 - [보안·모바일 확장](docs/SECURITY_AND_APPS.md)
 - [작업 규칙](AGENTS.md)
 
-GitHub 저장소 이름 변경은 완료했습니다. 이번 구조 개편 커밋은 **별도 push 승인 전까지 로컬/서버 bundle에만 있습니다**. GitHub clone이 최신 배포와 같은지 커밋을 대조하고, 필요하면 서버 bundle로 복원합니다. GitHub push는 명시적 요청 시에만 수행합니다.
+GitHub 최신 소스와 운영 배포 버전은 다를 수 있습니다. 2026-11-01 캔버스 변경은 사용자 확인 후 GitHub 반영 대상으로 확정했지만, 운영 배포는 보류했습니다. 운영 복원에는 서버 bundle과 실행 release를 대조합니다. GitHub push와 운영 배포는 각각 사용자 요청 범위를 따릅니다.
