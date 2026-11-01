@@ -61,12 +61,16 @@ export function LmsWorkspace({ tab }: { tab: 'news' | 'assignments' }) {
       ) : (
         <LmsAssignments items={snapshot.assignments} now={now} />
       )}
-      <div className={styles.footer}>
-        <span>30분 간격 자동 수집</span>
-        {snapshot?.lastSuccess && (
-          <span>마지막 성공 {displayTime(snapshot.lastSuccess)}</span>
-        )}
-      </div>
+      {snapshot?.lastSuccess && (
+        <div className={styles.footer}>
+          <span>
+            최근 동기화{' '}
+            <time dateTime={snapshot.lastSuccess}>
+              {displayTime(snapshot.lastSuccess)}
+            </time>
+          </span>
+        </div>
+      )}
     </>
   );
 }
