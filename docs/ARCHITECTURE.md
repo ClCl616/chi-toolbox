@@ -54,7 +54,7 @@ deploy/windows/         production 릴리스 전환·복구·작업 설치
 1. 기능 소유 디렉터리에서 시작한다. 기존 서비스 기능은 `features/<name>`과 `shell/workspaces.ts`에 등록한다. 기존 첫 9개 위치는 Alt+1~9 계약이다. 새 MVP는 `app/toolbox` 진입점과 `shell/toolbox` 탐색에 연결한다.
 2. `app/api/.../route.ts`에는 HTTP export와 프레임워크 설정만 둔다. 인증 API는 withAuth, 기능 검증·쿼리는 feature server에 둔다. 로그인·콜백·공개 학식·health는 예외다.
 
-   `/api/toolbox/lms`는 공개 계정 API가 아닌 opt-in 로컬 실험 경계다. 기본 비활성이며 loopback Host·출처 검사를 `features/lms/server`에서 수행한다. 공개 전환 전 사용자 인증·소유권 적용이 필수다. 수집·브라우저 로그인은 Node 요청 수명주기와 분리한 `workers/lms`가 담당한다. 실행 조건과 외부 소스 의존성은 [LMS 로컬 실행](LMS_LOCAL.md)을 따른다.
+   `/api/toolbox/lms`는 기본 비활성이며 로컬 preview와 운영 소유 계정 모드를 분리한다. 운영은 Auth 서버의 getUser 검증·확인된 소유 이메일 비교·출처 검사를 `features/lms/server`에서 수행한다. 로컬 모드에서는 loopback Host·출처를 검사한다. 수집·브라우저 로그인은 Node 요청 수명주기와 분리한 `workers/lms`가 담당한다. 실행 조건과 외부 소스 의존성은 [LMS 실행](LMS_LOCAL.md)을 따른다.
 3. 기능 UI가 커지면 독립적인 수명주기(업로드, 편집 저장) 또는 표시 단위를 분리한다. 모든 상태를 담는 거대한 범용 컨트롤러를 만들지 않는다.
 4. 순수 로직은 unit, 사용자 흐름은 browser, 인증·URL·프록시는 HTTP smoke로 확인한다. 새 회귀를 방지할 테스트만 추가한다.
 5. `npm run check`, `npm run build:test`, `npm run test:smoke`, `npm run test:browser` 후 문서 갱신·로컬 커밋·bundle 배포한다. CI는 검증만 하며 배포하지 않는다.

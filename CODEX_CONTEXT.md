@@ -7,7 +7,11 @@
 - 사용자가 최신 UI/LMS 배포와 Windows LMS 스케줄러 등록을 명시적으로 요청했다. 이전 배포 보류는 이 요청으로 해제됐다. 이번 요청은 추가 origin push 허용으로 해석하지 않는다.
 - 운영 API에 기존 Supabase getUser 검증과 서버에만 저장한 확인 완료 소유 이메일 비교를 추가했다. 미로그인401/다른 계정403, 교차 출처 거부, 캐시 금지, 인증 소실 시 클라이언트 이전 자료 제거. 로컬 preview는 기존 독립 모드를 유지한다. 다중 사용자 수집 연결은 제공하지 않는다.
 - 서버 LMS 전용 경로는 C:/Services/chi-toolbox-lms. private(쿠키·SQLite·변환 상태)와 public(인증 API용 snapshot·읽음 상태)을 분리하고 웹 LOCAL SERVICE는 private에 접근하지 않는다. NETWORK SERVICE 작업은 30분/부팅 실행·중복 무시·25분 상한으로 --once를 호출한다. 설치/실행 스크립트와 운영 절차를 deploy/windows에 추가했다.
-- 기존 Notifier 소스 89cf44b/schema v5는 별도 archive 복사본을 사용한다. 기존 Discord 작업·저장소·쿠키는 변경하지 않는다. Toolbox 로컬 watch를 멈추고 자체 세션·기준선을 서버로 이전한다. 실제 등록/배포/검증 결과는 작업 종료 시 갱신한다.
+- 기존 Notifier 소스 89cf44b/schema v5는 별도 archive 복사본을 사용한다. 기존 Discord 작업·저장소·쿠키는 변경하지 않았다. Toolbox 로컬 watch를 멈추고 자체 세션·기준선을 서버로 이전했다. 기존 사용자 Desktop의 Python은 서비스 계정에서 실행 불가여서 전용 python 디렉터리에 Python 3.13.15 base/runtime·호환 site-packages를 복사했다. 기존 Notifier의 권한을 완화하지 않았다.
+- 실행 앱 커밋 bf924bc, active release C:/Services/chi-hub-runtime/releases/20261102-021343-628-bf924bc57f10. App/Caddy Running, Trash Ready, health·toolbox·LMS 두 탭·login HTTP200. 미로그인 LMS GET/읽음 POST401 확인. 사용자가 운영 소유 계정 로그인 후 과제 목록 열람 성공을 확인했다.
+- CHI-TOOLBOX-LMS 등록/첫 실행 검증 완료: NETWORK SERVICE, 30분 반복(PT30M)과 부팅 트리거, 중복 실행 IgnoreNew, 25분 상한. 2026-11-02 02:15:31 시작 → 02:21:12 KST 수집 healthy, LastTaskResult=0/Ready. 확인 시 다음 실행은 02:44:40 KST였다. 실제 재부팅 검사는 수행하지 않았다. 첫 실패는 Python 접근 제한이었고 전용 런타임으로 해결했다.
+- 실제 웹 LOCAL SERVICE 권한 검사에서 public snapshot 읽기 가능, private 쿠키 읽기 불가를 확인했다. 임시 권한 검사 작업/파일은 제거했다. 로컬 check(구조131/단위18), Python4, dummy build, HTTP smoke(운영 인증 경계), toolbox/LMS 브라우저 검사 통과. 서버 npm ci 취약점0/build/배포 health 통과. 서버 및 기존 Notifier worktree clean 확인.
+- 후속 배포 기록 문서는 source/bundle만 동기화하고 앱을 재시작하지 않는다. GitHub는 앞서 push한 1a70877이며 이번 운영 보안/스케줄러 추가는 로컬·서버 bundle에만 있다. 추가 push는 사용자 요청을 따른다. 로컬 LMS 수집기와 preview는 서버 전환 중 중지했으며 운영은 서버 작업이 담당한다.
 
 ## 작업 마무리와 서버 확인 (2026-11-02)
 

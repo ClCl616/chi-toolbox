@@ -51,10 +51,10 @@ TOOLBOX_LMS_DATA=C:/Services/chi-toolbox-lms/public
 
 `TOOLBOX_LMS_LOCAL`은 운영에서 사용하지 않는다. production 모드가 local보다 우선한다. 데이터는 기존 운영 DB 변경 없이 전용 디렉터리에서 보관한다. `private`는 쿠키·기준선 SQLite·변환 상태이며 웹 앱은 읽을 수 없다. `public`도 웹 정적 경로가 아닌 인증 API용 snapshot/read 디렉터리다. 서비스 계정은 worker=NETWORK SERVICE, 웹=LOCAL SERVICE다.
 
-관리자 PowerShell에서 별도 Notifier 소스(검토 revision 89cf44b/schema v5)와 Python+Playwright 환경을 준비하고 다음을 실행한다. 기존 Notifier 저장소와 Discord 쿠키를 복사하지 않는다. 소스는 Git archive로 별도 보관하고 Toolbox 자체 로그인·데이터만 이전한다.
+관리자 PowerShell에서 별도 Notifier 소스(검토 revision 89cf44b/schema v5)와 Python+Playwright 환경을 준비하고 다음을 실행한다. 기존 Notifier 저장소와 Discord 쿠키를 복사하지 않는다. 소스는 Git archive로 별도 보관하고 Toolbox 자체 로그인·데이터만 이전한다. Python도 NETWORK SERVICE가 실행 가능한 전용 `python` 디렉터리에 준비한다. 현재 서버는 기존 Python 3.13.15의 base runtime과 호환 site-packages를 별도 복사해 사용한다. 사용자 Desktop의 venv를 직접 지정하면 서비스 계정 접근 제한으로 실행되지 않는다. Python/Playwright 업데이트 시 별도 런타임도 검증 후 갱신한다.
 
 ```powershell
-./deploy/windows/install-lms-task.ps1 -Python '<기존 Python 환경의 python.exe 절대 경로>' -NotifierSource 'C:/Services/chi-toolbox-lms/source'
+./deploy/windows/install-lms-task.ps1 -Python 'C:/Services/chi-toolbox-lms/python/python.exe' -NotifierSource 'C:/Services/chi-toolbox-lms/source'
 Start-ScheduledTask -TaskName CHI-TOOLBOX-LMS
 Get-ScheduledTaskInfo -TaskName CHI-TOOLBOX-LMS
 ```
@@ -76,7 +76,7 @@ git bundle create C:/Services/chi-toolbox-windows.bundle main
 
 health는 프로세스 생존 확인이며 DB/Auth/Storage 전체 검증은 아닙니다. 미인증 API가 401인지, login/manifest가 정상인지 확인합니다. 실제 사용자 계정 흐름은 별도 확인합니다. 예약 worker를 smoke 목적으로 실행하지 않습니다(만료 자료를 실제 삭제함).
 
-공통 UI 단계의 새 화면은 `/toolbox`, `/toolbox/lms`, `/toolbox/lms/assignments`, `/toolbox/settings`에 있습니다. 이 경로들은 개인 데이터를 제공하지 않는 공개 빈 화면이며 별도 환경 변수나 DB migration이 필요하지 않습니다. 기존 루트 서비스와 로그인은 유지됩니다. `test:toolbox`로 검증한 뒤 같은 앱 릴리스에 포함하고, 배포 후 각 경로의 HTTP 200과 실제 새 화면 문구를 확인합니다.
+새 화면은 `/toolbox`, `/toolbox/lms`, `/toolbox/lms/assignments`, `/toolbox/settings`에 있습니다. 셸은 공개되지만 운영 LMS 데이터는 위 소유 계정 인증 API로만 제공합니다. DB migration은 없으며 LMS 전용 서버 설정·데이터 권한이 필요합니다. 기존 루트 서비스와 로그인은 유지됩니다. `test:toolbox`와 `test:lms`로 검증하고, 배포 후 각 경로 HTTP200과 미로그인 LMS API401, 소유 계정 실제 열람을 확인합니다.
 
 ## 새 PC 인수인계
 
