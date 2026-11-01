@@ -22,6 +22,7 @@ const lmsData =
     : null;
 const suiteEnvironment = {
   ...testEnvironment,
+  TOOLBOX_LMS_ENABLED: '0',
   TOOLBOX_LMS_LOCAL: lmsData ? '1' : '0',
   ...(lmsData ? { TOOLBOX_LMS_DATA: lmsData } : {}),
 };

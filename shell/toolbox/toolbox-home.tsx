@@ -2,9 +2,18 @@
 import { ToolboxDashboard } from '@/features/dashboard/components/toolbox-dashboard';
 import { useLms } from '@/features/lms/use-lms';
 import { assignmentGroup, unreadCounts } from '@/features/lms/model';
+import { LmsAccess } from '@/features/lms/components/lms-access';
+import { ToolboxPageHeader } from '@/shared/components/toolbox-ui';
 
 export function ToolboxHome() {
-  const { snapshot, readIds, error, now } = useLms();
+  const { snapshot, readIds, error, now, access } = useLms();
+  if (access)
+    return (
+      <>
+        <ToolboxPageHeader title="대시보드" />
+        <LmsAccess access={access} />
+      </>
+    );
   const counts = unreadCounts(snapshot?.events ?? [], readIds);
   return (
     <ToolboxDashboard

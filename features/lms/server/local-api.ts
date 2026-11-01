@@ -1,6 +1,37 @@
 import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { isSnapshot } from '../model';
+import { getAuthContext } from '@/shared/server/auth';
+import { isLmsOwner, sameSiteRequest } from './access-policy';
+
+async function access(request: Request): Promise<Response | null> {
+  // Production mode takes precedence over a mistakenly retained local flag.
+  if (process.env.TOOLBOX_LMS_ENABLED === '1') {
+    if (
+      !process.env.TOOLBOX_LMS_OWNER_EMAIL?.trim() ||
+      !process.env.TOOLBOX_LMS_DATA
+    )
+      return json({ error: 'LMS 연결 설정이 필요합니다.' }, 503);
+    if (!sameSiteRequest(request, process.env.NEXT_PUBLIC_SITE_URL ?? ''))
+      return json({ error: '허용되지 않은 요청입니다.' }, 403);
+    try {
+      const { user } = await getAuthContext();
+      if (!user) return json({ error: '로그인이 필요합니다.' }, 401);
+      if (!isLmsOwner(user, process.env.TOOLBOX_LMS_OWNER_EMAIL))
+        return json(
+          { error: '이 계정에는 LMS가 연결되어 있지 않습니다.' },
+          403,
+        );
+      return null;
+    } catch {
+      return json({ error: '로그인 상태를 확인하지 못했습니다.' }, 503);
+    }
+  }
+  if (localAllowed(request)) return null;
+  return request.method === 'GET'
+    ? json({ enabled: false, snapshot: null, readIds: [] })
+    : json({ error: 'Local access only' }, 403);
+}
 
 function localAllowed(request: Request) {
   if (process.env.TOOLBOX_LMS_LOCAL !== '1') return false;
@@ -21,7 +52,10 @@ const root = () => resolve(process.env.TOOLBOX_LMS_DATA ?? 'work/lms');
 function json(value: unknown, status = 200) {
   return Response.json(value, {
     status,
-    headers: { 'Cache-Control': 'no-store', Vary: 'Origin, Host' },
+    headers: {
+      'Cache-Control': 'private, no-store',
+      Vary: 'Cookie, Origin, Host',
+    },
   });
 }
 async function readJson(file: string): Promise<unknown> {
@@ -51,8 +85,8 @@ async function reads() {
   return data as string[];
 }
 export async function GET(request: Request) {
-  if (!localAllowed(request))
-    return json({ enabled: false, snapshot: null, readIds: [] });
+  const denied = await access(request);
+  if (denied) return denied;
   try {
     return json({
       enabled: true,
@@ -68,7 +102,8 @@ export async function GET(request: Request) {
 }
 let writeQueue = Promise.resolve();
 export async function POST(request: Request) {
-  if (!localAllowed(request)) return json({ error: 'Local access only' }, 403);
+  const denied = await access(request);
+  if (denied) return denied;
   try {
     const body = await request.text();
     if (body.length > 65536) return json({ error: 'Request too large' }, 413);

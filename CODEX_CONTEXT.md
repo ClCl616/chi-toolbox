@@ -2,6 +2,13 @@
 
 > 2026-11-02 Asia/Seoul. 실제 Git·코드·운영 상태가 문서보다 우선한다. 비밀 값은 기록하지 않는다.
 
+## 운영 LMS 배포 작업 (2026-11-02)
+
+- 사용자가 최신 UI/LMS 배포와 Windows LMS 스케줄러 등록을 명시적으로 요청했다. 이전 배포 보류는 이 요청으로 해제됐다. 이번 요청은 추가 origin push 허용으로 해석하지 않는다.
+- 운영 API에 기존 Supabase getUser 검증과 서버에만 저장한 확인 완료 소유 이메일 비교를 추가했다. 미로그인401/다른 계정403, 교차 출처 거부, 캐시 금지, 인증 소실 시 클라이언트 이전 자료 제거. 로컬 preview는 기존 독립 모드를 유지한다. 다중 사용자 수집 연결은 제공하지 않는다.
+- 서버 LMS 전용 경로는 C:/Services/chi-toolbox-lms. private(쿠키·SQLite·변환 상태)와 public(인증 API용 snapshot·읽음 상태)을 분리하고 웹 LOCAL SERVICE는 private에 접근하지 않는다. NETWORK SERVICE 작업은 30분/부팅 실행·중복 무시·25분 상한으로 --once를 호출한다. 설치/실행 스크립트와 운영 절차를 deploy/windows에 추가했다.
+- 기존 Notifier 소스 89cf44b/schema v5는 별도 archive 복사본을 사용한다. 기존 Discord 작업·저장소·쿠키는 변경하지 않는다. Toolbox 로컬 watch를 멈추고 자체 세션·기준선을 서버로 이전한다. 실제 등록/배포/검증 결과는 작업 종료 시 갱신한다.
+
 ## 작업 마무리와 서버 확인 (2026-11-02)
 
 - 사용자가 이번 LMS 작업의 GitHub push를 명시적으로 요청했다. 반영 대상은 b46a490(LMS 로컬 기능), a19dd55(메시지/과제 UI·빈 항목 숨김), 4fbac3a(최근 동기화 시각만 표시)와 이 인수인계 기록이다. 이후 push는 별도 요청을 따른다. 미커밋 docs/MVP.md는 그대로 보존한다.

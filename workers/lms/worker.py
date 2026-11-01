@@ -23,7 +23,7 @@ def atomic_json(path, value):
     finally:
         Path(temporary).unlink(missing_ok=True)
 
-def cycle(data, browser, offset):
+def cycle(data, browser, offset, public=None):
     from dju_lms_notifier.storage.database import Database
     from dju_lms_notifier.lms.auth import AuthenticationError
     state_path = data / "worker-state.json"
@@ -55,13 +55,14 @@ def cycle(data, browser, offset):
         # This adapter deliberately targets the reviewed SQLite v5 schema.
         state = project(database._connection, previous, results, issues, now, offset)
         atomic_json(state_path, state)
-        atomic_json(data / "snapshot.json", public_snapshot(state))
+        atomic_json((public or data) / "snapshot.json", public_snapshot(state))
         print(f"LMS cycle: {state['status']}", flush=True)
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", required=True)
     parser.add_argument("--data-dir", required=True)
+    parser.add_argument("--public-dir", help="Separate API snapshot directory; never contains authentication cookies")
     parser.add_argument("--browser", default="msedge", choices=("msedge", "chromium", "chrome"))
     parser.add_argument("--login", action="store_true")
     parser.add_argument("--once", action="store_true")
@@ -69,9 +70,12 @@ def main():
     parser.add_argument("--utc-offset", default="+09:00", choices=("+09:00",), help="LMS time zone: confirmed Korean Standard Time")
     args = parser.parse_args()
     source, data = Path(args.source).resolve(), Path(args.data_dir).resolve()
+    public = Path(args.public_dir).resolve() if args.public_dir else data
     # Do not point a Toolbox worker at the existing Notifier's runtime data.
     if data == source or source in data.parents:
         raise SystemExit("Use a separate Toolbox data directory.")
+    if public == source or source in public.parents:
+        raise SystemExit("Use a separate snapshot directory.")
     sys.path.insert(0, str(source / "src"))
     from dju_lms_notifier.runner import cycle_lock, AlreadyRunning
     from dju_lms_notifier.lms.auth import manual_login
@@ -87,7 +91,7 @@ def main():
                 return 0 if status.value == "authenticated" else 2
             while True:
                 started = time.monotonic()
-                cycle(data, args.browser, 540 if args.utc_offset else None)
+                cycle(data, args.browser, 540 if args.utc_offset else None, public)
                 if args.once:
                     break
                 time.sleep(max(0, 1800 - (time.monotonic() - started)))

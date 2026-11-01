@@ -7,11 +7,12 @@ import {
 import { useLms } from '../use-lms';
 import { displayTime, unreadCounts } from '../model';
 import { LmsFeed } from './lms-feed';
+import { LmsAccess } from './lms-access';
 import { LmsAssignments } from './lms-assignments';
 import styles from './lms-workspace.module.css';
 
 export function LmsWorkspace({ tab }: { tab: 'news' | 'assignments' }) {
-  const { snapshot, readIds, loading, error, now } = useLms();
+  const { snapshot, readIds, loading, error, now, access } = useLms();
   const counts = unreadCounts(snapshot?.events ?? [], readIds);
   const status = !snapshot
     ? '미연결'
@@ -46,7 +47,9 @@ export function LmsWorkspace({ tab }: { tab: 'news' | 'assignments' }) {
         </Link>
       </nav>
       {error && <output className={styles.error}>{error}</output>}
-      {loading && !snapshot ? (
+      {access ? (
+        <LmsAccess access={access} />
+      ) : loading && !snapshot ? (
         <ToolboxState title="LMS 정보를 불러오는 중" kind="loading" />
       ) : !snapshot ? (
         <ToolboxState kind="unconnected" title="LMS 미연결">

@@ -16,6 +16,7 @@ type Context = LmsResponse & {
   error: string;
   markRead: (id: string) => void;
   now: number;
+  access: 'login' | 'forbidden' | null;
 };
 const LmsContext = createContext<Context | null>(null);
 export function LmsProvider({ children }: { children: ReactNode }) {
@@ -27,6 +28,7 @@ export function LmsProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [now, setNow] = useState(0);
+  const [access, setAccess] = useState<'login' | 'forbidden' | null>(null);
   const pending = useRef(new Set<string>());
   useEffect(() => {
     const controller = new AbortController();
@@ -39,6 +41,12 @@ export function LmsProvider({ children }: { children: ReactNode }) {
           cache: 'no-store',
           signal: controller.signal,
         });
+        if (response.status === 401 || response.status === 403) {
+          setData({ enabled: false, snapshot: null, readIds: [] });
+          setAccess(response.status === 401 ? 'login' : 'forbidden');
+          setError('');
+          return;
+        }
         if (!response.ok) throw new Error();
         const next: LmsResponse = await response.json();
         if (
@@ -53,6 +61,7 @@ export function LmsProvider({ children }: { children: ReactNode }) {
           readIds: [...new Set([...previous.readIds, ...next.readIds])],
         }));
         setNow(Date.now());
+        setAccess(null);
         setError('');
       } catch {
         if (!controller.signal.aborted)
@@ -83,6 +92,11 @@ export function LmsProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ ids: [id] }),
     })
       .then(async (response) => {
+        if (response.status === 401 || response.status === 403) {
+          setData({ enabled: false, snapshot: null, readIds: [] });
+          setAccess(response.status === 401 ? 'login' : 'forbidden');
+          return;
+        }
         if (!response.ok) throw new Error();
         const body = (await response.json()) as { readIds: string[] };
         if (
@@ -103,7 +117,9 @@ export function LmsProvider({ children }: { children: ReactNode }) {
       .finally(() => pending.current.delete(id));
   }, []);
   return (
-    <LmsContext.Provider value={{ ...data, loading, error, markRead, now }}>
+    <LmsContext.Provider
+      value={{ ...data, loading, error, markRead, now, access }}
+    >
       {children}
     </LmsContext.Provider>
   );

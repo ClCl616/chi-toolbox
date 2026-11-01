@@ -251,6 +251,32 @@ try {
     0,
     'No empty metadata',
   );
+  await context.route('**/api/toolbox/lms', (route) =>
+    route.fulfill({ status: 401, json: { error: 'login required' } }),
+  );
+  await page.evaluate(() =>
+    document.dispatchEvent(new Event('visibilitychange')),
+  );
+  await page
+    .getByRole('heading', { name: '로그인 후 확인할 수 있어요' })
+    .waitFor();
+  assert.equal(
+    await page.getByRole('article').count(),
+    0,
+    'Expired session clears cached private data',
+  );
+  await context.unroute('**/api/toolbox/lms');
+  await context.route('**/api/toolbox/lms', (route) =>
+    route.fulfill({ status: 403, json: { error: 'not owner' } }),
+  );
+  await page.evaluate(() =>
+    document.dispatchEvent(new Event('visibilitychange')),
+  );
+  await page
+    .getByRole('heading', { name: '이 계정에는 LMS가 연결되어 있지 않아요' })
+    .waitFor();
+  assert.equal(await page.getByRole('article').count(), 0);
+  await context.unroute('**/api/toolbox/lms');
   // Broken snapshots fail closed rather than publishing empty data as success.
   await writeFile(join(data, 'snapshot.json'), '{broken');
   assert.equal((await request('')).status, 503);

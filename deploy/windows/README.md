@@ -39,6 +39,32 @@ dirty worktree나 분기가 있으면 강제로 덮어쓰지 않습니다. GitHu
 
 ## 배포 후 확인
 
+### Toolbox LMS (단일 소유 계정)
+
+LMS는 기존 Discord 작업과 독립적이다. 소유자의 서버 검증된 로그인·확인 완료 이메일이 `TOOLBOX_LMS_OWNER_EMAIL`과 일치해야 API를 사용할 수 있다. 다른 계정은 403, 미로그인은 401이다. 설정은 보호된 서버 `.env.local`에만 저장한다. 값 자체를 문서·Git·로그에 남기지 않는다.
+
+```text
+TOOLBOX_LMS_ENABLED=1
+TOOLBOX_LMS_OWNER_EMAIL=<확인된 소유 계정>
+TOOLBOX_LMS_DATA=C:/Services/chi-toolbox-lms/public
+```
+
+`TOOLBOX_LMS_LOCAL`은 운영에서 사용하지 않는다. production 모드가 local보다 우선한다. 데이터는 기존 운영 DB 변경 없이 전용 디렉터리에서 보관한다. `private`는 쿠키·기준선 SQLite·변환 상태이며 웹 앱은 읽을 수 없다. `public`도 웹 정적 경로가 아닌 인증 API용 snapshot/read 디렉터리다. 서비스 계정은 worker=NETWORK SERVICE, 웹=LOCAL SERVICE다.
+
+관리자 PowerShell에서 별도 Notifier 소스(검토 revision 89cf44b/schema v5)와 Python+Playwright 환경을 준비하고 다음을 실행한다. 기존 Notifier 저장소와 Discord 쿠키를 복사하지 않는다. 소스는 Git archive로 별도 보관하고 Toolbox 자체 로그인·데이터만 이전한다.
+
+```powershell
+./deploy/windows/install-lms-task.ps1 -Python '<기존 Python 환경의 python.exe 절대 경로>' -NotifierSource 'C:/Services/chi-toolbox-lms/source'
+Start-ScheduledTask -TaskName CHI-TOOLBOX-LMS
+Get-ScheduledTaskInfo -TaskName CHI-TOOLBOX-LMS
+```
+
+작업은 30분 간격과 부팅 시 실행되며 중복 실행을 무시한다. 실행 상한은 25분이다. `run-lms.ps1`이 `--once`를 호출하므로 별도의 watch 루프를 중복 실행하지 않는다. 첫 실행의 작업 결과와 snapshot 갱신을 확인한다. `logs/latest.log`에는 고정 상태만 기록한다. 작업 결과 0만으로 LMS 전체 성공을 단정하지 말고 snapshot status도 확인한다.
+
+worker 업데이트 시 실행을 멈춘 뒤 `workers/lms/{worker,projector}.py`를 전용 `worker` 폴더에 복사하고 재개한다. 재설치 스크립트는 기존 작업을 자동 덮어쓰지 않는다. 재로그인은 worker 실행을 중단하고 별도 사용자 브라우저에서 Toolbox용 세션을 만든 뒤 보호된 `private/auth/storage_state.json`에 전달한다. 세션 내용을 출력하지 않는다.
+
+소유자 로그인 후 `/toolbox` 실제 열람 확인은 별도 수행한다. 개인용 연결을 여러 가입자에게 공유하지 않는다. 다른 사용자의 수집 연결은 별도 설계·저장소 분리가 필요하다.
+
 ```powershell
 Get-Content C:/Services/chi-hub-runtime/active.txt
 Get-ScheduledTask -TaskName CHI-HUB-App,CHI-HUB-Trash

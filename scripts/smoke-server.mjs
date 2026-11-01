@@ -14,6 +14,10 @@ const child = spawn(process.execPath, ['scripts/start-server.mjs'], {
     NEXT_PUBLIC_SUPABASE_URL: 'https://smoke-test.invalid',
     NEXT_PUBLIC_SUPABASE_ANON_KEY: 'smoke-test-anon-key',
     NEXT_PUBLIC_SITE_URL: 'https://chitoolbox.com',
+    TOOLBOX_LMS_ENABLED: '1',
+    TOOLBOX_LMS_OWNER_EMAIL: 'owner@example.invalid',
+    TOOLBOX_LMS_DATA: 'work/unused-smoke-lms-data',
+    TOOLBOX_LMS_LOCAL: '1',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
@@ -48,6 +52,28 @@ try {
     'Client asset available',
   );
   assert.equal((await fetch(`${base}/api/auth/status`)).status, 401);
+  // Production owner mode must override local preview, including requests from loopback.
+  assert.equal((await fetch(`${base}/api/toolbox/lms`)).status, 401);
+  assert.equal(
+    (
+      await fetch(`${base}/api/toolbox/lms/read`, {
+        method: 'POST',
+        headers: { Origin: 'https://chitoolbox.com' },
+        body: '{"ids":[]}',
+      })
+    ).status,
+    401,
+  );
+  assert.equal(
+    (
+      await fetch(`${base}/api/toolbox/lms/read`, {
+        method: 'POST',
+        headers: { Origin: 'https://other.invalid' },
+        body: '{"ids":[]}',
+      })
+    ).status,
+    403,
+  );
   assert.equal((await fetch(`${base}/api/files`)).status, 401);
   // Exercise every protected route export after moving handlers out of app/.
   const protectedRoutes = {
