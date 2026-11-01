@@ -5,13 +5,9 @@ import {
   ToolboxState,
 } from '@/shared/components/toolbox-ui';
 import { useLms } from '../use-lms';
-import {
-  assignmentGroup,
-  effectiveDeadline,
-  displayTime,
-  unreadCounts,
-} from '../model';
+import { displayTime, unreadCounts } from '../model';
 import { LmsFeed } from './lms-feed';
+import { LmsAssignments } from './lms-assignments';
 import styles from './lms-workspace.module.css';
 
 export function LmsWorkspace({ tab }: { tab: 'news' | 'assignments' }) {
@@ -24,16 +20,6 @@ export function LmsWorkspace({ tab }: { tab: 'news' | 'assignments' }) {
       : snapshot.status === 'login_required'
         ? '로그인 필요'
         : '갱신 확인 필요';
-  const groups = [
-    ['pending', '남은 과제'],
-    ['overdue', '기한 지난 과제'],
-    ['unknown', '확인 필요한 과제'],
-  ] as const;
-  const assignments = [...(snapshot?.assignments ?? [])].sort(
-    (a, b) =>
-      (Date.parse(effectiveDeadline(a) ?? '') || Infinity) -
-      (Date.parse(effectiveDeadline(b) ?? '') || Infinity),
-  );
   return (
     <>
       <ToolboxPageHeader
@@ -73,49 +59,13 @@ export function LmsWorkspace({ tab }: { tab: 'news' | 'assignments' }) {
           첫 과제 수집이 완료되면 표시됩니다.
         </ToolboxState>
       ) : (
-        <div className={styles.assignmentGroups}>
-          {groups.map(([key, title]) => {
-            const items = assignments.filter(
-              (item) => assignmentGroup(item, now) === key,
-            );
-            return (
-              <section key={key} aria-label={title}>
-                <h2>
-                  {title} <span>{items.length}</span>
-                </h2>
-                {items.length === 0 ? (
-                  <p className={styles.emptyGroup}>해당하는 과제가 없어요.</p>
-                ) : (
-                  <ul>
-                    {items.map((item) => (
-                      <li key={item.id}>
-                        <span className={styles.meta}>
-                          {item.course}
-                          {item.stale ? ' · 이전 수집 정보' : ''}
-                        </span>
-                        <h3>{item.title}</h3>
-                        <p className={styles.due}>
-                          {effectiveDeadline(item)
-                            ? `마감 ${displayTime(effectiveDeadline(item))}`
-                            : item.deadlineText
-                              ? `마감 ${item.deadlineText} · 시간대 확인 필요`
-                              : '마감 시각 확인 필요'}
-                          {item.submitted === null
-                            ? ' · 제출 상태 확인 필요'
-                            : ''}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            );
-          })}
-        </div>
+        <LmsAssignments items={snapshot.assignments} now={now} />
       )}
       <div className={styles.footer}>
         <span>30분 간격 자동 수집</span>
-        <span>마지막 성공 {displayTime(snapshot?.lastSuccess ?? null)}</span>
+        {snapshot?.lastSuccess && (
+          <span>마지막 성공 {displayTime(snapshot.lastSuccess)}</span>
+        )}
       </div>
     </>
   );

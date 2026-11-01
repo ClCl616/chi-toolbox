@@ -186,6 +186,71 @@ try {
     ),
   );
   await page.screenshot({ path: 'work/qa/lms-assignments-mobile-test.png' });
+  // Empty categories disappear, but unknown tasks must not disappear with missing deadlines.
+  await writeFile(
+    join(data, 'snapshot.json'),
+    JSON.stringify({
+      ...snapshot,
+      assignments: [
+        item,
+        { ...item, id: 'next', title: '다음 과제', deadline: date(2) },
+        { ...item, id: 'later', title: '나중 과제', deadline: date(6) },
+      ],
+    }),
+  );
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.reload();
+  await page.getByRole('heading', { name: '나중 과제', exact: true }).waitFor();
+  assert.equal(
+    await page
+      .getByRole('region', { name: '기한 지난 과제', exact: true })
+      .count(),
+    0,
+  );
+  assert.equal(
+    await page
+      .getByRole('region', { name: '확인 필요한 과제', exact: true })
+      .count(),
+    0,
+  );
+  await page.screenshot({ path: 'work/qa/lms-assignment-cards-test.png' });
+  for (const width of [320, 390, 820, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    assert.ok(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      `Assignment overflow at ${width}`,
+    );
+  }
+  await writeFile(
+    join(data, 'snapshot.json'),
+    JSON.stringify({ ...snapshot, assignments: [] }),
+  );
+  await page.reload();
+  await page
+    .getByRole('heading', { name: '남은 과제가 없어요', exact: true })
+    .waitFor();
+  assert.equal(await page.locator('[data-group]').count(), 0);
+  await writeFile(
+    join(data, 'snapshot.json'),
+    JSON.stringify({
+      ...snapshot,
+      events: [{ ...events[0], body: '   ', course: '', category: '' }],
+    }),
+  );
+  await page.goto(`${base}/toolbox/lms`);
+  await page.getByRole('article').waitFor();
+  assert.equal(
+    await page.locator('details').count(),
+    0,
+    'No empty details control',
+  );
+  assert.equal(
+    await page.getByRole('article').locator('p').count(),
+    0,
+    'No empty metadata',
+  );
   // Broken snapshots fail closed rather than publishing empty data as success.
   await writeFile(join(data, 'snapshot.json'), '{broken');
   assert.equal((await request('')).status, 503);

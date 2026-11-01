@@ -1,5 +1,13 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
+import {
+  Megaphone,
+  FileText,
+  ClipboardList,
+  Activity,
+  Video,
+  NotebookPen,
+} from 'lucide-react';
 import { ToolboxState } from '@/shared/components/toolbox-ui';
 import { useLms } from '../use-lms';
 import { displayTime } from '../model';
@@ -7,6 +15,9 @@ import styles from './lms-workspace.module.css';
 
 export function LmsFeed() {
   const { snapshot, readIds, markRead } = useLms();
+  const [firstUnread] = useState(
+    () => snapshot?.events.find((event) => !readIds.includes(event.id))?.id,
+  );
   const root = useRef<HTMLDivElement>(null);
   const positioned = useRef(false);
   useEffect(() => {
@@ -77,33 +88,57 @@ export function LmsFeed() {
     );
   return (
     <div ref={root} className={styles.feed} aria-label="LMS 소식 피드">
-      {snapshot.events.map((event) => (
-        <article
-          key={event.id}
-          className={
-            event.kind === 'system' ? styles.systemMessage : styles.message
-          }
-        >
-          <header data-read-id={event.id}>
-            <span className={styles.meta}>
-              {[event.course, event.category].filter(Boolean).join(' · ')}
-            </span>
-            <h2>{event.title}</h2>
-            <span className={styles.readState}>
-              {readIds.includes(event.id) ? '읽음' : '읽지 않음'}
-            </span>
-          </header>
-          {event.body && (
-            <details>
-              <summary>내용 보기</summary>
-              <p className={styles.body}>{event.body}</p>
-            </details>
-          )}
-          <time dateTime={event.detectedAt}>
-            {displayTime(event.detectedAt)}
-          </time>
-        </article>
-      ))}
+      {snapshot.events.map((event) => {
+        const system = event.kind === 'system';
+        const Icon = system
+          ? Activity
+          : event.category.includes('과제')
+            ? ClipboardList
+            : event.category.includes('자료')
+              ? FileText
+              : event.category.includes('강의')
+                ? Video
+                : event.category.includes('시험')
+                  ? NotebookPen
+                  : Megaphone;
+        const meta = [event.course, event.category]
+          .filter((value) => value.trim())
+          .join(' · ');
+        return (
+          <Fragment key={event.id}>
+            {event.id === firstUnread && (
+              <div className={styles.unreadDivider}>
+                여기부터 읽지 않은 소식
+              </div>
+            )}
+            <article className={system ? styles.systemMessage : styles.message}>
+              <span className={styles.icon}>
+                <Icon size={22} aria-hidden="true" />
+              </span>
+              <div className={styles.messageContent}>
+                {meta && <p className={styles.meta}>{meta}</p>}
+                <div className={styles.bubble}>
+                  <header data-read-id={event.id}>
+                    <h2>{event.title}</h2>
+                    <span className={styles.readState}>
+                      {readIds.includes(event.id) ? '읽음' : '읽지 않음'}
+                    </span>
+                  </header>
+                  {event.body.trim() && (
+                    <details>
+                      <summary>내용 보기</summary>
+                      <p className={styles.body}>{event.body}</p>
+                    </details>
+                  )}
+                </div>
+                <time dateTime={event.detectedAt}>
+                  {displayTime(event.detectedAt)}
+                </time>
+              </div>
+            </article>
+          </Fragment>
+        );
+      })}
     </div>
   );
 }
