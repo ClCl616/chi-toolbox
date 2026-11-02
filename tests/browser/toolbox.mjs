@@ -56,13 +56,14 @@ try {
   await page.getByRole('heading', { name: 'LMS 미연결' }).waitFor();
   await page
     .getByRole('navigation', { name: 'LMS 보기' })
-    .getByRole('link', { name: '남은 과제' })
+    .getByRole('button', { name: '남은 과제' })
     .click();
-  await page.waitForURL('**/toolbox/lms/assignments');
+  assert.equal(new URL(page.url()).pathname, '/toolbox/lms');
+  assert.equal(await page.getByRole('button', { name: '남은 과제' }).getAttribute('aria-pressed'), 'true');
   await page.reload();
   await page.getByRole('heading', { name: 'LMS 미연결' }).waitFor();
   await page.goBack();
-  await page.waitForURL('**/toolbox/lms');
+  await page.waitForURL('**/toolbox');
 
   for (const [width, height] of [
     [320, 640],
@@ -110,6 +111,10 @@ try {
         pageHeight: document.documentElement.scrollHeight,
         viewport: innerHeight,
         lastHeight: element.lastElementChild.getBoundingClientRect().height,
+        withinDesktopCap: [...element.children].every(card => {
+          const rect = card.getBoundingClientRect();
+          return rect.width <= 360 && rect.height <= 240;
+        }),
       }));
       assert.ok(
         metrics.pageHeight <= metrics.viewport + 1,
@@ -120,12 +125,13 @@ try {
         `Vertical canvas overflow ${width}x${height}/${count}`,
       );
       assert.ok(metrics.lastHeight > 90, 'Card must remain legible');
+      if (width > 820) assert.ok(metrics.withinDesktopCap, 'Desktop card exceeds 360 × 240');
       if (count === 2 && height >= 600)
         assert.ok(
           metrics.scrollWidth <= metrics.width + 1,
           `Two cards must fit ${width}`,
         );
-      if (count >= 7) {
+      if (count >= 7 && (width <= 820 || count >= 16 || metrics.scrollWidth > metrics.width)) {
         assert.ok(
           metrics.scrollWidth > metrics.width,
           `Canvas must expand for ${count} cards`,

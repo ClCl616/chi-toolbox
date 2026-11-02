@@ -20,6 +20,7 @@ export type LmsAssignment = {
   stale: boolean;
 };
 export type LmsSnapshot = {
+  displayName?: string;
   version: 1;
   status: 'healthy' | 'partial' | 'failed' | 'login_required' | 'unknown';
   lastAttempt: string;

@@ -11,21 +11,23 @@ const cards = [
   {
     id: 'assignments',
     title: '남은 과제',
-    href: '/toolbox/lms/assignments',
+    href: '/toolbox/lms',
     icon: ClipboardList,
   },
-];
+ ] as const;
 
 export function ToolboxDashboard({
+  onOpenCard,
   newsCount,
   systemCount,
   assignmentCount,
   status,
 }: {
+  onOpenCard: (id: (typeof cards)[number]['id']) => void;
   newsCount: number | null;
   systemCount: number;
   assignmentCount: number | null;
-  status: string;
+  status: string | null;
 }) {
   const canvas = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -66,6 +68,7 @@ export function ToolboxDashboard({
           <Link
             key={id}
             href={href}
+            onNavigate={() => onOpenCard(id)}
             className={styles.card}
             data-card={id}
             aria-label={`${title} · ${id === 'news' ? (newsCount ?? '미연결') : (assignmentCount ?? '미연결')}${id === 'news' && systemCount > 0 ? ` · 상태 알림 ${systemCount}` : ''}`}
@@ -87,7 +90,7 @@ export function ToolboxDashboard({
                   </span>
                 )}
               </div>
-              <span className={styles.status}>{status}</span>
+              {status && <span className={styles.status}>{status}</span>}
             </div>
           </Link>
         ))}

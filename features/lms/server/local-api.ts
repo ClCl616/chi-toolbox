@@ -75,7 +75,8 @@ async function readJson(file: string): Promise<unknown> {
 async function snapshot() {
   const data = await readJson('snapshot.json');
   if (data !== null && !isSnapshot(data)) throw new Error('Invalid snapshot');
-  return data;
+  if (!data) return null;
+  return { ...data, displayName: process.env.TOOLBOX_LMS_DISPLAY_NAME?.trim() || undefined };
 }
 async function reads() {
   const data = await readJson('read.json');

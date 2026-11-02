@@ -46,9 +46,19 @@
 .canvas:has(> :nth-child(7)) {
   --columns: 3.2;
 }
-.canvas:has(> :nth-child(3)):not(:has(> :nth-child(4))) > :first-child,
-.canvas:has(> :nth-child(5)):not(:has(> :nth-child(6))) > :first-child {
-  grid-row: span 2;
+@media (width > 820px) {
+  .canvas {
+    align-content: start;
+    grid-auto-columns: clamp(
+      220px,
+      calc((100% - (var(--columns) - 1) * var(--gap)) / var(--columns)),
+      360px
+    );
+    grid-template-rows: repeat(
+      var(--rows),
+      min(240px, calc((100% - (var(--rows) - 1) * var(--gap)) / var(--rows)))
+    );
+  }
 }
 .card {
   container-type: size;

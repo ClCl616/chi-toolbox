@@ -123,6 +123,7 @@ try {
     .waitFor();
   await page.screenshot({ path: 'work/qa/lms-dashboard-test.png' });
   await page.getByRole('link', { name: '남은 과제 · 1', exact: true }).click();
+  await page.waitForURL(url => url.pathname === '/toolbox/lms' && !url.search && !url.hash);
   for (const title of ['남은 과제 테스트', '기한 지난 테스트', '미확인 테스트'])
     await page.getByRole('heading', { name: title, exact: true }).waitFor();
   assert.equal(await page.getByText('제출 완료 테스트').count(), 0);
@@ -133,7 +134,7 @@ try {
   );
   await page
     .getByRole('navigation', { name: 'LMS 보기' })
-    .getByRole('link', { name: /새 소식/ })
+    .getByRole('button', { name: /새 소식/ })
     .click();
   await page.locator('[data-read-id="event:13"]').waitFor();
   await page.waitForFunction(() => {

@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { useState } from 'react';
 import {
   ToolboxPageHeader,
   ToolboxState,
@@ -11,26 +11,33 @@ import { LmsAccess } from './lms-access';
 import { LmsAssignments } from './lms-assignments';
 import styles from './lms-workspace.module.css';
 
-export function LmsWorkspace({ tab }: { tab: 'news' | 'assignments' }) {
-  const { snapshot, readIds, loading, error, now, access } = useLms();
+export function LmsWorkspace({ tab: initialTab }: { tab: 'news' | 'assignments' }) {
+  const { snapshot, readIds, loading, error, now, access, entryTab } = useLms();
+  const [tab, setTab] = useState(initialTab === 'assignments' ? initialTab : entryTab);
   const counts = unreadCounts(snapshot?.events ?? [], readIds);
-  const status = !snapshot
-    ? '미연결'
-    : snapshot.status === 'healthy'
-      ? '연결됨'
-      : snapshot.status === 'login_required'
-        ? '로그인 필요'
-        : '갱신 확인 필요';
+  const displayName = snapshot?.displayName?.trim();
+  const initial = displayName && Array.from(displayName.normalize('NFC'))[0];
+  const status = !snapshot ? '미연결'
+    : snapshot.status === 'login_required' ? '로그인 필요' : '갱신 확인 필요';
   return (
     <>
       <ToolboxPageHeader
         title="LMS"
-        action={<span className={styles.connection}>{status}</span>}
+        action={snapshot?.status === 'healthy' ? (
+          <div className={styles.identity}>
+            {initial && <span className={styles.avatar} aria-hidden="true">{initial}</span>}
+            <div className={styles.identityText}>
+              {displayName && <strong title={displayName}>{displayName}</strong>}
+              <span>대전대학교</span>
+            </div>
+          </div>
+        ) : <span className={styles.connection}>{status}</span>}
       />
       <nav className={styles.tabs} aria-label="LMS 보기">
-        <Link
-          href="/toolbox/lms"
-          aria-current={tab === 'news' ? 'page' : undefined}
+        <button
+          type="button"
+          onClick={() => setTab('news')}
+          aria-pressed={tab === 'news'}
         >
           새 소식{counts.news > 0 && ` ${counts.news}`}
           {counts.system > 0 && (
@@ -38,13 +45,14 @@ export function LmsWorkspace({ tab }: { tab: 'news' | 'assignments' }) {
               상태 알림 {counts.system}
             </span>
           )}
-        </Link>
-        <Link
-          href="/toolbox/lms/assignments"
-          aria-current={tab === 'assignments' ? 'page' : undefined}
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('assignments')}
+          aria-pressed={tab === 'assignments'}
         >
           남은 과제
-        </Link>
+        </button>
       </nav>
       {error && <output className={styles.error}>{error}</output>}
       {access ? (

@@ -1,3 +1,34 @@
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(48vw, 260px);
+}
+.avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--tb-soft);
+  color: var(--tb-accent);
+  font-size: 18px;
+  font-weight: 700;
+}
+.identityText {
+  display: grid;
+  min-width: 0;
+  color: var(--tb-muted);
+  font-size: 13px;
+}
+.identityText strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--tb-ink);
+  font-size: 16px;
+}
 .connection {
   display: inline-flex;
   align-items: center;
@@ -27,18 +58,18 @@
   border-bottom: 1px solid var(--tb-border);
   margin: -5px 0 32px;
 }
-.tabs a {
+.tabs button {
   padding: 16px 22px;
   color: var(--tb-muted);
   border-bottom: 3px solid transparent;
   font-size: 15px;
   font-weight: 600;
 }
-.tabs a[aria-current='page'],
-.tabs a:hover {
+.tabs button[aria-pressed='true'],
+.tabs button:hover {
   color: var(--tb-accent);
 }
-.tabs a[aria-current='page'] {
+.tabs button[aria-pressed='true'] {
   border-color: var(--tb-accent);
 }
 .icon {
@@ -319,7 +350,7 @@
     margin-top: 0;
     gap: 0;
   }
-  .tabs a {
+  .tabs button {
     flex: 1;
     text-align: center;
     padding: 14px 8px;

@@ -6,7 +6,7 @@ import { LmsAccess } from '@/features/lms/components/lms-access';
 import { ToolboxPageHeader } from '@/shared/components/toolbox-ui';
 
 export function ToolboxHome() {
-  const { snapshot, readIds, error, now, access } = useLms();
+  const { snapshot, readIds, error, now, access, setEntryTab } = useLms();
   if (access)
     return (
       <>
@@ -17,6 +17,7 @@ export function ToolboxHome() {
   const counts = unreadCounts(snapshot?.events ?? [], readIds);
   return (
     <ToolboxDashboard
+      onOpenCard={setEntryTab}
       newsCount={snapshot ? counts.news : null}
       systemCount={counts.system}
       assignmentCount={
@@ -30,7 +31,7 @@ export function ToolboxHome() {
         error || (snapshot?.status && snapshot.status !== 'healthy')
           ? '갱신 확인 필요'
           : snapshot
-            ? '마지막 수집 기준'
+            ? null
             : '미연결'
       }
     />
