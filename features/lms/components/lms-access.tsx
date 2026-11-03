@@ -1,12 +1,12 @@
 import Link from 'next/link';
 import { ToolboxState } from '@/shared/components/toolbox-ui';
 
-export function LmsAccess({ access }: { access: 'login' | 'forbidden' }) {
+export function LmsAccess({ access, loginHref = '/login?returnTo=%2Ftoolbox' }: { access: 'login' | 'forbidden'; loginHref?: string }) {
   return access === 'login' ? (
     <ToolboxState
       kind="unconnected"
       title="로그인 후 확인할 수 있어요"
-      action={<Link href="/login?returnTo=%2Ftoolbox">로그인</Link>}
+      action={<Link href={loginHref}>로그인</Link>}
     >
       연결된 계정의 LMS 소식과 과제를 확인하세요.
     </ToolboxState>

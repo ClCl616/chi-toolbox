@@ -13,7 +13,7 @@ const navigation = [
   { href: '/toolbox/settings', label: '설정', icon: Settings },
 ];
 
-export function ToolboxShell({ children }: { children: ReactNode }) {
+export function ToolboxShell({ children, dashboardHref = '/toolbox' }: { children: ReactNode; dashboardHref?: string }) {
   const pathname = usePathname();
   return (
     <LmsProvider>
@@ -23,7 +23,7 @@ export function ToolboxShell({ children }: { children: ReactNode }) {
         </a>
         <aside className={styles.sidebar}>
           <Link
-            href="/toolbox"
+            href={dashboardHref}
             className={styles.brand}
             aria-label="Chi Toolbox 대시보드"
           >
@@ -36,12 +36,12 @@ export function ToolboxShell({ children }: { children: ReactNode }) {
             {navigation.map(({ href, label, icon: Icon }) => {
               const active =
                 href === '/toolbox'
-                  ? pathname === href
+                  ? pathname === dashboardHref
                   : pathname.startsWith(href);
               return (
                 <Link
                   key={href}
-                  href={href}
+                  href={href === '/toolbox' ? dashboardHref : href}
                   className={styles.navItem}
                   aria-current={active ? 'page' : undefined}
                 >

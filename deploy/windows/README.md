@@ -105,3 +105,7 @@ Google OAuth 운영 및 localhost/127.0.0.1 `/auth/callback`을 유지합니다.
 기존 0001~0005는 운영 테이블에 반영됐으나 migration history에는 없다는 이전 확인 기록이 있습니다. 전체 db push 재적용을 금지합니다. 새 schema만 새 migration으로 추가하고 실제 이력/RLS/권한을 확인합니다.
 
 정리 순서는 Storage API 바이트 삭제 → DB 파일 메타데이터 → 빈 만료 폴더 → 만료 메모입니다. service_role은 서버 worker에만 둡니다. 휴지통은 30일 보관하며 백업을 대신하지 않습니다. tests/database SQL은 명시적인 rollback 조건을 이해한 후에만 수동 실행합니다.
+
+## 운영 도메인의 검증 화면
+
+`/dev/login`에서 실제 계정으로 로그인하면 기본적으로 `/dev/dashboard`로 이동한다. 두 주소는 운영 인증 세션과 기존 LMS 소유자 권한을 사용한다. Google 콜백은 기존 `/auth/callback`으로 받고 테스트 화면에서 시작한 요청의 오류는 `/dev/login`에 표시한다. 기존 로그인은 `/login`, 기존 대시보드는 `/toolbox`다. 로컬 재검증은 dummy 빌드 후 `node scripts/run-browser-tests.mjs dev-login`으로 실행한다.

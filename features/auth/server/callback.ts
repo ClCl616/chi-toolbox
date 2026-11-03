@@ -1,13 +1,18 @@
+import { returnPath, loginFailureUrl } from '../return-path';
 import { NextResponse } from 'next/server';
 import { createClient } from '@/shared/server/server';
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
-  const requestedNext = url.searchParams.get('next') ?? '/';
-  const next =
-    requestedNext.startsWith('/') && !requestedNext.startsWith('//')
-      ? requestedNext
-      : '/';
+  const dev = url.searchParams.get('screen') === 'dev';
+  const next = returnPath(
+    url.searchParams.get('next'),
+    dev ? '/dev/dashboard' : '/',
+  );
+  if (url.searchParams.has('error') || (dev && !code))
+    return NextResponse.redirect(
+      loginFailureUrl(url.origin, 'callback', next, dev),
+    );
   if (code) {
     try {
       const supabase = await createClient();
@@ -15,7 +20,7 @@ export async function GET(request: Request) {
       if (error) throw error;
     } catch {
       return NextResponse.redirect(
-        new URL('/login?error=callback', url.origin),
+        loginFailureUrl(url.origin, 'callback', next, dev),
       );
     }
   }

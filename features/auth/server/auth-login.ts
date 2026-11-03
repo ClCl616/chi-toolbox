@@ -16,6 +16,11 @@ export async function POST(request: Request) {
       email,
       password,
     });
+    if (error && (!error.status || error.status >= 500))
+      return NextResponse.json(
+        { message: '인증 서비스를 이용할 수 없어요.' },
+        { status: 503 },
+      );
     if (error)
       return NextResponse.json(
         { message: '이메일 또는 비밀번호가 올바르지 않습니다.' },

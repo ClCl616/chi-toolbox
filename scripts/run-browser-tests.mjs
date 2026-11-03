@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 const port = '13002';
 const base = `http://127.0.0.1:${port}`;
-const suite = ['toolbox', 'lms'].includes(process.argv[2])
+const suite = ['toolbox', 'lms', 'dev-login'].includes(process.argv[2])
   ? process.argv[2]
   : 'workspaces';
 try {

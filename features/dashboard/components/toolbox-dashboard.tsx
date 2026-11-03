@@ -17,12 +17,14 @@ const cards = [
  ] as const;
 
 export function ToolboxDashboard({
+  assignmentHref = '/toolbox/lms',
   onOpenCard,
   newsCount,
   systemCount,
   assignmentCount,
   status,
 }: {
+  assignmentHref?: string;
   onOpenCard: (id: (typeof cards)[number]['id']) => void;
   newsCount: number | null;
   systemCount: number;
@@ -67,7 +69,7 @@ export function ToolboxDashboard({
         {cards.map(({ id, title, href, icon: Icon }) => (
           <Link
             key={id}
-            href={href}
+            href={id === 'assignments' ? assignmentHref : href}
             onNavigate={() => onOpenCard(id)}
             className={styles.card}
             data-card={id}
