@@ -111,7 +111,12 @@ export function LmsFeed() {
                 여기부터 읽지 않은 소식
               </div>
             )}
-            <article className={system ? styles.systemMessage : styles.message}>
+            <article
+              className={system ? styles.systemMessage : styles.message}
+              data-tone={system
+                ? (event.title === 'LMS 수집이 복구됐어요' ? 'info' : 'warning')
+                : undefined}
+            >
               <span className={styles.icon}>
                 <Icon size={22} aria-hidden="true" />
               </span>

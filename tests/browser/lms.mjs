@@ -19,9 +19,9 @@ const events = Array.from({ length: 18 }, (_, i) => ({
   kind: i >= 16 ? 'system' : 'news',
   title:
     i === 16
-      ? '수집 실패 알림'
+      ? 'LMS 수집에 실패했어요'
       : i === 17
-        ? '수집 복구 알림'
+        ? 'LMS 수집이 복구됐어요'
         : `테스트 소식 ${i + 1}`,
   course: '테스트 과목',
   category: i >= 16 ? '상태 알림' : '공지',
@@ -122,6 +122,9 @@ try {
     .getByRole('link', { name: '남은 과제 · 1', exact: true })
     .waitFor();
   await page.screenshot({ path: 'work/qa/lms-dashboard-test.png' });
+  const alertIcon = page.locator('[data-card="news"] [title="확인할 상태 알림이 있어요"]');
+  assert.equal(await alertIcon.locator('svg').count(), 1);
+  assert.equal(await alertIcon.innerText(), '');
   await page.getByRole('link', { name: '남은 과제 · 1', exact: true }).click();
   await page.waitForURL(url => url.pathname === '/toolbox/lms' && !url.search && !url.hash);
   for (const title of ['남은 과제 테스트', '기한 지난 테스트', '미확인 테스트'])
@@ -137,6 +140,16 @@ try {
     .getByRole('button', { name: /새 소식/ })
     .click();
   await page.locator('[data-read-id="event:13"]').waitFor();
+  for (const [title, background, border] of [
+    ['LMS 수집에 실패했어요', 'rgb(255, 240, 240)', 'rgb(228, 92, 100)'],
+    ['LMS 수집이 복구됐어요', 'rgb(239, 246, 255)', 'rgb(90, 143, 205)'],
+  ]) {
+    const bubble = page.getByRole('heading', { name: title, exact: true }).locator('..').locator('..');
+    assert.deepEqual(await bubble.evaluate(element => {
+      const style = getComputedStyle(element);
+      return [style.backgroundColor, style.borderTopColor, style.borderTopStyle];
+    }), [background, border, 'dashed']);
+  }
   await page.waitForFunction(() => {
     const r = document
       .querySelector('[data-read-id="event:13"]')
@@ -165,6 +178,7 @@ try {
   await page.goto(`${base}/toolbox`);
   await page.getByRole('link', { name: '새 소식 · 0', exact: true }).waitFor();
   assert.equal(await page.getByText(/상태 알림/).count(), 0);
+  assert.equal(await page.locator('[data-card="news"] [title="확인할 상태 알림이 있어요"]').count(), 0);
   // A failed save must not reduce unread counts or lose the next revisit position.
   await writeFile(join(data, 'read.json'), JSON.stringify(initialReads));
   await context.route('**/api/toolbox/lms/read', (route) =>

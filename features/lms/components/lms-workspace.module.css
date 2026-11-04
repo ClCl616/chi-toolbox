@@ -173,7 +173,12 @@
 .systemMessage .bubble {
   border-radius: 20px;
   padding: 14px 20px;
-  background: #fafdfe;
+  background: #eff6ff;
+  border: 2px dashed #5a8fcd;
+}
+.systemMessage[data-tone='warning'] .bubble {
+  background: #fff0f0;
+  border-color: #e45c64;
 }
 .systemMessage h2 {
   font-size: 14px;

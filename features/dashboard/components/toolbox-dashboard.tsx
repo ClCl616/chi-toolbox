@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { ClipboardList, Megaphone } from 'lucide-react';
+import { ClipboardList, Megaphone, TriangleAlert } from 'lucide-react';
 import { ToolboxPageHeader } from '@/shared/components/toolbox-ui';
 import styles from './toolbox-dashboard.module.css';
 
@@ -87,8 +87,8 @@ export function ToolboxDashboard({
                   {(id === 'news' ? newsCount : assignmentCount) ?? '—'}
                 </span>
                 {id === 'news' && systemCount > 0 && (
-                  <span className={styles.systemCount}>
-                    상태 알림 <strong>{systemCount}</strong>
+                  <span className={styles.systemAlert} title="확인할 상태 알림이 있어요">
+                    <TriangleAlert aria-hidden="true" />
                   </span>
                 )}
               </div>

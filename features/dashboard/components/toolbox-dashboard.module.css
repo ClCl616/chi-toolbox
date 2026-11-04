@@ -121,16 +121,18 @@
   flex-wrap: wrap;
   gap: 12px;
 }
-.systemCount {
-  color: #9e1231;
-  background: #fff2f4;
-  border-radius: 10px;
-  padding: 5px 9px;
-  font-size: 12px;
+.systemAlert {
+  display: inline-flex;
+  align-self: center;
+  color: #087f79;
 }
-.systemCount strong {
-  margin-left: 4px;
-  font-size: 20px;
+.systemAlert svg {
+  width: clamp(24px, min(12cqw, 17cqh), 60px);
+  height: auto;
+  fill: #ffd45a;
+}
+.systemAlert svg > path:first-child {
+  stroke: #ffd45a;
 }
 .card[data-card='news'] .status {
   color: #e0f6ed;
