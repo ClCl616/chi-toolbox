@@ -17,14 +17,14 @@ export async function POST(request: Request) {
       );
     const supabase = await createClient();
     const origin = new URL(request.url).origin;
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { emailRedirectTo: `${origin}/auth/callback` },
     });
     if (error)
       return NextResponse.json({ message: error.message }, { status: 400 });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, signedIn: Boolean(data.session) });
   } catch {
     return NextResponse.json(
       { message: 'Supabase 연결이 아직 설정되지 않았습니다.' },

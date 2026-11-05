@@ -1,5 +1,6 @@
 'use client';
 import { useRef, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { returnPath } from '../return-path';
 import styles from './login.module.css';
@@ -23,6 +24,7 @@ export function DevLoginForm() {
   const params = useSearchParams();
   const next = returnPath(params.get('returnTo'), '/dev/dashboard');
   const [signup, setSignup] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState<'email' | 'google' | null>(null);
   const [errors, setErrors] = useState<Errors>({});
   const [message, setMessage] = useState('');
@@ -75,8 +77,13 @@ export function DevLoginForm() {
           setMessage('가입하지 못했어요. 입력 내용을 확인해 주세요.');
         else setMessage('이메일 또는 비밀번호를 확인해 주세요.');
       } else if (signup) {
+        const data = (await response.json()) as { signedIn?: boolean };
+        if (data.signedIn) {
+          window.location.assign(next);
+          return;
+        }
         setSuccess(true);
-        setMessage('가입 확인 메일을 보냈습니다. 이메일을 확인해 주세요.');
+        setMessage('가입 요청을 처리했어요. 로그인으로 돌아가 계속해 주세요.');
       } else {
         window.location.assign(next);
         return;
@@ -156,27 +163,51 @@ export function DevLoginForm() {
             return (
               <div className={styles.field} key={field}>
                 <label htmlFor={field}>{label}</label>
-                <input
-                  id={field}
-                  name={field}
-                  type={field}
-                  placeholder={label}
-                  required
-                  readOnly={!!pending}
-                  ref={field === 'email' ? email : password}
-                  autoComplete={
-                    field === 'email'
-                      ? 'email'
-                      : signup
-                        ? 'new-password'
-                        : 'current-password'
+                <div
+                  className={
+                    field === 'password' ? styles.passwordControl : undefined
                   }
-                  aria-invalid={!!errors[field]}
-                  aria-describedby={
-                    errors[field] ? field + '-error' : undefined
-                  }
-                  onChange={(e) => change(field, e.currentTarget)}
-                />
+                >
+                  <input
+                    id={field}
+                    name={field}
+                    type={field === 'password' && showPassword ? 'text' : field}
+                    placeholder={label}
+                    required
+                    readOnly={!!pending}
+                    ref={field === 'email' ? email : password}
+                    autoComplete={
+                      field === 'email'
+                        ? 'email'
+                        : signup
+                          ? 'new-password'
+                          : 'current-password'
+                    }
+                    aria-invalid={!!errors[field]}
+                    aria-describedby={
+                      errors[field] ? field + '-error' : undefined
+                    }
+                    onChange={(e) => change(field, e.currentTarget)}
+                  />
+                  {field === 'password' && (
+                    <button
+                      type="button"
+                      className={styles.passwordToggle}
+                      aria-label={
+                        showPassword ? '비밀번호 숨기기' : '비밀번호 표시'
+                      }
+                      aria-controls="password"
+                      disabled={!!pending}
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff size={20} aria-hidden="true" />
+                      ) : (
+                        <Eye size={20} aria-hidden="true" />
+                      )}
+                    </button>
+                  )}
+                </div>
                 {errors[field] && (
                   <p className={styles.error} id={field + '-error'}>
                     {errors[field]}
@@ -213,6 +244,8 @@ export function DevLoginForm() {
           disabled={!!pending}
           onClick={() => {
             setSignup(!signup);
+            setShowPassword(false);
+            setSuccess(false);
             setErrors({});
             setMessage('');
             setGoogleError(false);
