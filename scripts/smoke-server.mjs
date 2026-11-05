@@ -43,6 +43,38 @@ try {
     const response = await fetch(base + path);
     assert.equal(response.status, 200, path);
   }
+  for (const path of [
+    '/v2/dashboard',
+    '/v2/login',
+    '/v2/signup',
+    '/v2/lms',
+    '/v2/lms/assignments',
+    '/v2/settings',
+  ]) {
+    assert.equal((await fetch(base + path)).status, 200, path);
+  }
+  for (const [from, to] of [
+    ['/v2', '/v2/dashboard'],
+    ['/v2/', '/v2'],
+    ['/toolbox', '/v2/dashboard'],
+    ['/toolbox/lms', '/v2/lms'],
+    ['/toolbox/lms/assignments', '/v2/lms/assignments'],
+    ['/toolbox/settings', '/v2/settings'],
+    ['/dev/login', '/v2/login'],
+    ['/dev/dashboard', '/v2/dashboard'],
+  ]) {
+    const response = await fetch(base + from, { redirect: 'manual' });
+    assert.ok([301, 302, 307, 308].includes(response.status), from);
+    assert.equal(
+      new URL(response.headers.get('location'), base).pathname,
+      to,
+      from,
+    );
+  }
+  assert.equal(
+    new URL((await fetch(base + '/v2/')).url).pathname,
+    '/v2/dashboard',
+  );
   const html = await (await fetch(`${base}/login`)).text();
   const asset = html.match(/(?:src|href)="([^" ]+\.js)"/)?.[1];
   assert.ok(asset, 'SSR emits a client script');

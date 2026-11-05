@@ -8,12 +8,18 @@ import { LmsProvider } from '@/features/lms/use-lms';
 import styles from './toolbox-shell.module.css';
 
 const navigation = [
-  { href: '/toolbox', label: '대시보드', icon: LayoutDashboard },
-  { href: '/toolbox/lms', label: 'LMS', icon: BookOpen },
-  { href: '/toolbox/settings', label: '설정', icon: Settings },
+  { href: '/v2/dashboard', label: '대시보드', icon: LayoutDashboard },
+  { href: '/v2/lms', label: 'LMS', icon: BookOpen },
+  { href: '/v2/settings', label: '설정', icon: Settings },
 ];
 
-export function ToolboxShell({ children, dashboardHref = '/toolbox' }: { children: ReactNode; dashboardHref?: string }) {
+export function ToolboxShell({
+  children,
+  dashboardHref = '/v2/dashboard',
+}: {
+  children: ReactNode;
+  dashboardHref?: string;
+}) {
   const pathname = usePathname();
   return (
     <LmsProvider>
@@ -35,13 +41,13 @@ export function ToolboxShell({ children, dashboardHref = '/toolbox' }: { childre
           <nav className={styles.navigation} aria-label="주 메뉴">
             {navigation.map(({ href, label, icon: Icon }) => {
               const active =
-                href === '/toolbox'
+                href === '/v2/dashboard'
                   ? pathname === dashboardHref
                   : pathname.startsWith(href);
               return (
                 <Link
                   key={href}
-                  href={href === '/toolbox' ? dashboardHref : href}
+                  href={href === '/v2/dashboard' ? dashboardHref : href}
                   className={styles.navItem}
                   aria-current={active ? 'page' : undefined}
                 >

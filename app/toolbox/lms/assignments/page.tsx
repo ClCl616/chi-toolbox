@@ -1,6 +1,4 @@
-import { LmsWorkspace } from '@/features/lms/components/lms-workspace';
-
-export const metadata = { title: '남은 과제' };
-export default function AssignmentsPage() {
-  return <LmsWorkspace tab="assignments" />;
+import { redirect } from 'next/navigation';
+export default function Page() {
+  redirect('/v2/lms/assignments');
 }

@@ -12,8 +12,32 @@ export function loginFailureUrl(
   next: string,
   dev = false,
 ) {
-  const url = new URL(dev ? '/dev/login' : '/login', origin);
+  const url = new URL(dev ? '/v2/login' : '/login', origin);
   url.searchParams.set('error', error);
   if (next !== '/') url.searchParams.set('returnTo', next);
   return url;
+}
+
+export function v2ReturnPath(value: string | null) {
+  const fallback = '/v2/dashboard';
+  const safe = returnPath(value, fallback);
+  const aliases: Record<string, string> = {
+    '/toolbox': fallback,
+    '/dev/dashboard': fallback,
+    '/toolbox/lms': '/v2/lms',
+    '/toolbox/lms/assignments': '/v2/lms/assignments',
+    '/toolbox/settings': '/v2/settings',
+  };
+  const url = new URL(safe, 'https://local.invalid');
+  const pathname = aliases[url.pathname] ?? url.pathname;
+  if (
+    ![
+      '/v2/dashboard',
+      '/v2/lms',
+      '/v2/lms/assignments',
+      '/v2/settings',
+    ].includes(pathname)
+  )
+    return fallback;
+  return pathname + url.search + url.hash;
 }

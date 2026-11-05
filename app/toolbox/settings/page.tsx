@@ -1,6 +1,4 @@
-import { ToolboxSettings } from '@/features/settings/components/toolbox-settings';
-
-export const metadata = { title: '설정' };
-export default function ToolboxSettingsPage() {
-  return <ToolboxSettings />;
+import { redirect } from 'next/navigation';
+export default function Page() {
+  redirect('/v2/settings');
 }

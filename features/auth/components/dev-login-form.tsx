@@ -1,8 +1,8 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
-import { returnPath } from '../return-path';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { v2ReturnPath } from '../return-path';
 import styles from './login.module.css';
 
 type Field = 'email' | 'password';
@@ -22,8 +22,10 @@ function fieldError(field: Field, input: HTMLInputElement, signup: boolean) {
 
 export function DevLoginForm() {
   const params = useSearchParams();
-  const next = returnPath(params.get('returnTo'), '/dev/dashboard');
-  const [signup, setSignup] = useState(false);
+  const next = v2ReturnPath(params.get('returnTo'));
+  const pathname = usePathname();
+  const router = useRouter();
+  const signup = pathname === '/v2/signup';
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState<'email' | 'google' | null>(null);
   const [errors, setErrors] = useState<Errors>({});
@@ -35,6 +37,18 @@ export function DevLoginForm() {
   const email = useRef<HTMLInputElement>(null);
   const password = useRef<HTMLInputElement>(null);
   const busy = useRef(false);
+  const [previousPath, setPreviousPath] = useState(pathname);
+  if (previousPath !== pathname) {
+    setPreviousPath(pathname);
+    setShowPassword(false);
+    setErrors({});
+    setMessage('');
+    setSuccess(false);
+    setGoogleError(false);
+  }
+  useEffect(() => {
+    if (password.current) password.current.value = '';
+  }, [pathname]);
   function change(field: Field, input: HTMLInputElement) {
     if (errors[field])
       setErrors({ ...errors, [field]: fieldError(field, input, signup) });
@@ -65,6 +79,8 @@ export function DevLoginForm() {
           body: JSON.stringify({
             email: email.current.value.trim(),
             password: password.current.value,
+            screen: 'v2',
+            returnTo: next,
           }),
         },
       );
@@ -102,7 +118,7 @@ export function DevLoginForm() {
     setPending('google');
     setGoogleError(false);
     window.location.assign(
-      '/api/auth/google?screen=dev&next=' + encodeURIComponent(next),
+      '/api/auth/google?screen=v2&next=' + encodeURIComponent(next),
     );
   }
   const googleControl = (
@@ -243,7 +259,11 @@ export function DevLoginForm() {
           className={styles.switchMode}
           disabled={!!pending}
           onClick={() => {
-            setSignup(!signup);
+            router.push(
+              (signup ? '/v2/login' : '/v2/signup') +
+                '?returnTo=' +
+                encodeURIComponent(next),
+            );
             setShowPassword(false);
             setSuccess(false);
             setErrors({});

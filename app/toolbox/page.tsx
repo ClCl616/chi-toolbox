@@ -1,5 +1,4 @@
-import { ToolboxHome } from '@/shell/toolbox/toolbox-home';
-
-export default function ToolboxPage() {
-  return <ToolboxHome />;
+import { redirect } from 'next/navigation';
+export default function Page() {
+  redirect('/v2/dashboard');
 }

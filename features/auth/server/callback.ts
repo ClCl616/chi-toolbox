@@ -1,14 +1,13 @@
-import { returnPath, loginFailureUrl } from '../return-path';
+import { returnPath, v2ReturnPath, loginFailureUrl } from '../return-path';
 import { NextResponse } from 'next/server';
 import { createClient } from '@/shared/server/server';
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
-  const dev = url.searchParams.get('screen') === 'dev';
-  const next = returnPath(
-    url.searchParams.get('next'),
-    dev ? '/dev/dashboard' : '/',
-  );
+  const dev = ['dev', 'v2'].includes(url.searchParams.get('screen') ?? '');
+  const next = dev
+    ? v2ReturnPath(url.searchParams.get('next'))
+    : returnPath(url.searchParams.get('next'));
   if (url.searchParams.has('error') || (dev && !code))
     return NextResponse.redirect(
       loginFailureUrl(url.origin, 'callback', next, dev),

@@ -7,25 +7,21 @@ import { ToolboxPageHeader } from '@/shared/components/toolbox-ui';
 import styles from './toolbox-dashboard.module.css';
 
 const cards = [
-  { id: 'news', title: '새 소식', href: '/toolbox/lms', icon: Megaphone },
+  { id: 'news', title: '새 소식', href: '/v2/lms', icon: Megaphone },
   {
     id: 'assignments',
     title: '남은 과제',
-    href: '/toolbox/lms',
+    href: '/v2/lms/assignments',
     icon: ClipboardList,
   },
- ] as const;
+] as const;
 
 export function ToolboxDashboard({
-  assignmentHref = '/toolbox/lms',
-  onOpenCard,
   newsCount,
   systemCount,
   assignmentCount,
   status,
 }: {
-  assignmentHref?: string;
-  onOpenCard: (id: (typeof cards)[number]['id']) => void;
   newsCount: number | null;
   systemCount: number;
   assignmentCount: number | null;
@@ -69,8 +65,7 @@ export function ToolboxDashboard({
         {cards.map(({ id, title, href, icon: Icon }) => (
           <Link
             key={id}
-            href={id === 'assignments' ? assignmentHref : href}
-            onNavigate={() => onOpenCard(id)}
+            href={href}
             className={styles.card}
             data-card={id}
             aria-label={`${title} · ${id === 'news' ? (newsCount ?? '미연결') : (assignmentCount ?? '미연결')}${id === 'news' && systemCount > 0 ? ` · 상태 알림 ${systemCount}` : ''}`}
@@ -87,7 +82,10 @@ export function ToolboxDashboard({
                   {(id === 'news' ? newsCount : assignmentCount) ?? '—'}
                 </span>
                 {id === 'news' && systemCount > 0 && (
-                  <span className={styles.systemAlert} title="확인할 상태 알림이 있어요">
+                  <span
+                    className={styles.systemAlert}
+                    title="확인할 상태 알림이 있어요"
+                  >
                     <TriangleAlert aria-hidden="true" />
                   </span>
                 )}

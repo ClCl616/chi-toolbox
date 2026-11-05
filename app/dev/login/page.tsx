@@ -1,20 +1,14 @@
-import { Suspense } from 'react';
-import { DevLoginForm } from '@/features/auth/components/dev-login-form';
-import styles from '@/features/auth/components/login.module.css';
-
-export const metadata = { title: '로그인' };
-
-export default function LoginPage() {
-  return (
-    <main className={styles.page}>
-      <div className={styles.window}>
-        <a href="/dev/dashboard" className={styles.brand}>
-          <span aria-hidden="true">C</span>Chi Toolbox
-        </a>
-        <Suspense fallback={<output>로그인 화면을 불러오는 중…</output>}>
-          <DevLoginForm />
-        </Suspense>
-      </div>
-    </main>
-  );
+import { redirect } from 'next/navigation';
+import { v2ReturnPath } from '@/features/auth/return-path';
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const query = new URLSearchParams();
+  if (typeof params.returnTo === 'string')
+    query.set('returnTo', v2ReturnPath(params.returnTo));
+  if (typeof params.error === 'string') query.set('error', params.error);
+  redirect('/v2/login' + (query.size ? '?' + query : ''));
 }

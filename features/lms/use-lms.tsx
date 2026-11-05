@@ -12,8 +12,6 @@ import { isSnapshot } from './model';
 import type { LmsResponse } from './model';
 
 type Context = LmsResponse & {
-  entryTab: 'news' | 'assignments';
-  setEntryTab: (tab: 'news' | 'assignments') => void;
   loading: boolean;
   error: string;
   markRead: (id: string) => void;
@@ -27,7 +25,6 @@ export function LmsProvider({ children }: { children: ReactNode }) {
     snapshot: null,
     readIds: [],
   });
-  const [entryTab, setEntryTab] = useState<'news' | 'assignments'>('news');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [now, setNow] = useState(0);
@@ -121,7 +118,7 @@ export function LmsProvider({ children }: { children: ReactNode }) {
   }, []);
   return (
     <LmsContext.Provider
-      value={{ ...data, entryTab, setEntryTab, loading, error, markRead, now, access }}
+      value={{ ...data, loading, error, markRead, now, access }}
     >
       {children}
     </LmsContext.Provider>

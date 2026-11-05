@@ -1,9 +1,12 @@
+import { v2ReturnPath } from '../return-path';
 import { NextResponse } from 'next/server';
 import { createClient } from '@/shared/server/server';
 export async function POST(request: Request) {
   try {
-    const { email, password } = (await request.json()) as {
+    const { email, password, screen, returnTo } = (await request.json()) as {
       email?: unknown;
+      screen?: unknown;
+      returnTo?: unknown;
       password?: unknown;
     };
     if (
@@ -20,7 +23,9 @@ export async function POST(request: Request) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${origin}/auth/callback` },
+      options: {
+        emailRedirectTo: `${origin}/auth/callback${screen === 'v2' ? '?screen=v2&next=' + encodeURIComponent(v2ReturnPath(typeof returnTo === 'string' ? returnTo : null)) : ''}`,
+      },
     });
     if (error)
       return NextResponse.json({ message: error.message }, { status: 400 });
