@@ -24,17 +24,28 @@ def atomic_json(path, value):
         Path(temporary).unlink(missing_ok=True)
 
 def cycle(data, browser, offset, public=None):
+    from boards import BoardPolicy, collect_boards
     from dju_lms_notifier.storage.database import Database
     from dju_lms_notifier.lms.auth import AuthenticationError
     state_path = data / "worker-state.json"
     previous = json.loads(state_path.read_text(encoding="utf-8")) if state_path.exists() else None
     results, issues = [], []
+    policy_path = data / "board-checks.json"
+    checks = json.loads(policy_path.read_text(encoding="utf-8")) if policy_path.exists() else {}
     with Database(data / "notifier.sqlite3") as database:
+        policy = BoardPolicy(checks.get("details", {}), database._connection)
         for category in ("notices", "materials", "assignments", "exams", "lessons"):
             try:
-                module = importlib.import_module(f"dju_lms_notifier.lms.{category}")
-                collected = getattr(module, f"collect_{category}")(data / "auth/storage_state.json", browser)
+                if category in ("notices", "materials"):
+                    collected = collect_boards(data / "auth/storage_state.json", browser, category, policy)
+                else:
+                    module = importlib.import_module(f"dju_lms_notifier.lms.{category}")
+                    collected = getattr(module, f"collect_{category}")(data / "auth/storage_state.json", browser)
                 database.process_results(collected)
+                if category in ("notices", "materials"):
+                    policy.committed(collected)
+                    atomic_json(policy_path, {"version": 1, "details": policy.state,
+                                             "lists": {**checks.get("lists", {}), **policy.listed_at}})
                 results.extend(collected)
                 for result in collected:
                     if result.error:
