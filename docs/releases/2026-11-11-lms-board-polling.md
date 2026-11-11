@@ -32,3 +32,11 @@ git diff --check
 Windows 전달 시 CHI-TOOLBOX-LMS 실행 상태를 확인하고 실행 중인 주기가 끝난 뒤 해당 작업만 잠시 비활성화한다. 기존 worker 파일을 별도 백업하고 `workers/lms/worker.py`, `projector.py`, `boards.py` 세 파일을 전용 worker 폴더에 전달한다. 별도 Notifier source와 private/public 데이터는 보존한다. 서버 Python으로 오프라인 테스트 후 기존 작업 활성 상태를 복원한다. 검증 목적으로 실제 수집을 강제 실행하지 않는다. 웹 앱 빌드·재시작은 필요 없다.
 
 복구는 작업을 중지한 상태에서 이전 worker 파일을 복원한다. 새 확인 파일은 기존 수집기가 사용하지 않으므로 삭제할 필요가 없다. GitHub push는 수행하지 않는다.
+
+## 적용 결과 · 2026-11-11
+
+- 구현 커밋 `e618a7f`. 로컬 Python 14개와 기본 검사(구조·타입·린트·단위19개), 기존 저장 목록20개의 제목 추출 대조, diff 검사 통과.
+- Git bundle로 Windows checkout을 fast-forward한 뒤 서버의 실제 별도 Notifier source/Python 환경에서 오프라인14개 통과. 운영 데이터는 테스트에 사용하지 않았다.
+- 21:30 KST에 세 worker 파일 해시 및 설치 위치에서 import/schema v5를 확인하고 CHI-TOOLBOX-LMS를 기존 활성 상태로 복원했다(Ready, Enabled). 이전 파일은 `C:/Services/chi-toolbox-lms/backups/board-polling-20261111-213005`에 보관했다. 첫 import 확인 명령의 인용 오류로 한번 자동 복원한 뒤 명령을 수정하여 재검증·전달했다.
+- 실제 LMS 수집은 강제로 실행하지 않았다. 다음 정기 실행의 성공 여부·실제 조회수 증가 감소·새 본문 변경 이벤트는 운영 관찰이 필요하다. 웹 앱과 별도 Discord 작업, origin은 변경하지 않았다.
+- 기존 문서 재구성 미커밋 변경은 보존했다. CODEX_CONTEXT는 이번 작업의 추가 기록만 선택적으로 커밋했다.
