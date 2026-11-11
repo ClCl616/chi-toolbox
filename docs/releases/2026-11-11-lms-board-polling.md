@@ -40,3 +40,8 @@ Windows 전달 시 CHI-TOOLBOX-LMS 실행 상태를 확인하고 실행 중인 �
 - 21:30 KST에 세 worker 파일 해시 및 설치 위치에서 import/schema v5를 확인하고 CHI-TOOLBOX-LMS를 기존 활성 상태로 복원했다(Ready, Enabled). 이전 파일은 `C:/Services/chi-toolbox-lms/backups/board-polling-20261111-213005`에 보관했다. 첫 import 확인 명령의 인용 오류로 한번 자동 복원한 뒤 명령을 수정하여 재검증·전달했다.
 - 실제 LMS 수집은 강제로 실행하지 않았다. 다음 정기 실행의 성공 여부·실제 조회수 증가 감소·새 본문 변경 이벤트는 운영 관찰이 필요하다. 웹 앱과 별도 Discord 작업, origin은 변경하지 않았다.
 - 기존 문서 재구성 미커밋 변경은 보존했다. CODEX_CONTEXT는 이번 작업의 추가 기록만 선택적으로 커밋했다.
+
+
+## 후속 결정: 정기 상세 재확인 제거
+
+사용자 요청으로 `ed40442`에서 24시간 재확인을 제거했다. 로컬·서버 Python15개와 로컬 기본 검사(단위19개 포함)가 통과했다. 2026-11-11 21:35 KST에 서버 boards.py 해시·import 확인 후 예약 작업을 Ready/Enabled로 복원했다. 백업은 `C:/Services/chi-toolbox-lms/backups/no-periodic-20261111-213548`이다. 기존 확인 파일·DB는 초기화하지 않았고 실제 수집을 강제 실행하지 않았다. 제목이 같은 본문·첨부 변경은 감지하지 않는 정책을 사용자가 선택했다. 이전 적용 결과의 24시간 정책·14개 검사는 과거 이력이다.
