@@ -84,11 +84,10 @@ def read_listing(page, first, board_id, first_html):
 
 
 class BoardPolicy:
-    def __init__(self, state, connection, now=None, interval=86400):
+    def __init__(self, state, connection, now=None):
         self.state = state
         self.connection = connection
         self.now = now or datetime.now(timezone.utc)
-        self.interval = interval
         self.fresh = {}
         self.listed_at = {}
 
@@ -109,11 +108,7 @@ class BoardPolicy:
         entry = self.state.get(self.key(ref))
         if not entry or entry.get("signature") != signature:
             return True
-        try:
-            age = (self.now - datetime.fromisoformat(entry["detailCheckedAt"])).total_seconds()
-            return age < 0 or age >= self.interval
-        except (ValueError, TypeError, KeyError):
-            return True
+        return False
 
     def reuse(self, ref, signature):
         # Retry an interrupted course without opening successful details twice.

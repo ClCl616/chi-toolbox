@@ -41,13 +41,13 @@ class BoardTests(unittest.TestCase):
         self.db.process_results([result])
         policy.committed([result])
 
-    def test_new_unchanged_title_change_and_daily_body_review(self):
+    def test_only_new_or_changed_title_requires_detail(self):
         self.assertTrue(self.policy().due(REF, "title"))
         self.seed()
         self.assertFalse(self.policy(NOW + timedelta(minutes=30)).due(REF, "title"))
         self.assertTrue(self.policy().due(REF, "changed"))
-        self.assertTrue(self.policy(NOW + timedelta(days=1)).due(REF, "title"))
-        self.assertTrue(self.policy(NOW - timedelta(seconds=1)).due(REF, "title"))
+        self.assertFalse(self.policy(NOW + timedelta(days=365)).due(REF, "title"))
+        self.assertFalse(self.policy(NOW - timedelta(seconds=1)).due(REF, "title"))
 
     def test_failed_course_does_not_advance_check_time_and_retry_reuses_detail(self):
         policy = self.policy()
@@ -135,8 +135,14 @@ class BoardTests(unittest.TestCase):
         items, visits = self.collect(self.policy(NOW + timedelta(minutes=30)))
         self.assertEqual((items, visits), ((), 0))
 
-    def test_daily_review_reads_once_and_retry_does_not_reopen(self):
+    def test_old_unchanged_post_is_never_reopened_due_to_age(self):
         self.seed()
+        for days in (1, 7, 365):
+            self.assertEqual(self.collect(self.policy(NOW + timedelta(days=days))), ((), 0))
+
+    def test_title_change_reads_once_and_retry_does_not_reopen(self):
+        self.seed()
+        self.state["BBS_SYNTH_N:article"]["signature"] = "old title"
         policy = self.policy(NOW + timedelta(days=1))
         self.assertEqual(self.collect(policy), ((ITEM,), 1))
         self.assertEqual(self.collect(policy), ((ITEM,), 0))
