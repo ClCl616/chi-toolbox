@@ -21,7 +21,7 @@ foreach ($dir in @('private','public','logs')) {
 & icacls.exe (Join-Path $Root 'public') /grant '*S-1-5-19:(OI)(CI)M' | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Cannot grant public data access.' }
 $source = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
-Copy-Item -LiteralPath (Join-Path $source 'workers\lms\worker.py'),(Join-Path $source 'workers\lms\projector.py'),(Join-Path $source 'workers\lms\boards.py'),(Join-Path $source 'workers\lms\popups.py') -Destination "$Root\worker" -Force
+Copy-Item -LiteralPath (Join-Path $source 'workers\lms\worker.py'),(Join-Path $source 'workers\lms\projector.py'),(Join-Path $source 'workers\lms\boards.py'),(Join-Path $source 'workers\lms\popups.py'),(Join-Path $source 'workers\lms\session.py'),(Join-Path $source 'workers\lms\activities.py'),(Join-Path $source 'workers\lms\collection.py') -Destination "$Root\worker" -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'run-lms.ps1') -Destination $Root -Force
 $pythonLiteral = $Python.Replace("'", "''")
 $sourceLiteral = $NotifierSource.Replace("'", "''")

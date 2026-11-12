@@ -1,7 +1,6 @@
 """Independent local worker: reuses Notifier code, never its data or Discord dispatch."""
 import argparse
 from datetime import datetime, timezone
-import importlib
 import json
 import os
 from pathlib import Path
@@ -25,7 +24,10 @@ def atomic_json(path, value):
         Path(temporary).unlink(missing_ok=True)
 
 def cycle(data, browser, offset, public=None):
-    from boards import BoardPolicy, collect_boards
+    from boards import BoardPolicy
+    from collection import collect_cycle
+    from session import Metrics
+    from contextlib import closing
     from dju_lms_notifier.storage.database import Database
     from dju_lms_notifier.lms.auth import AuthenticationError
     state_path = data / "worker-state.json"
@@ -35,42 +37,37 @@ def cycle(data, browser, offset, public=None):
     checks = json.loads(policy_path.read_text(encoding="utf-8")) if policy_path.exists() else {}
     with Database(data / "notifier.sqlite3") as database:
         policy = BoardPolicy(checks.get("details", {}), database._connection)
-        for category in ("notices", "materials", "assignments", "exams", "lessons"):
-            try:
-                if category in ("notices", "materials"):
-                    collected = collect_boards(data / "auth/storage_state.json", browser, category, policy)
-                else:
-                    module = importlib.import_module(f"dju_lms_notifier.lms.{category}")
-                    collected = getattr(module, f"collect_{category}")(data / "auth/storage_state.json", browser)
-                database.process_results(collected)
-                if category in ("notices", "materials"):
-                    policy.committed(collected)
-                    atomic_json(policy_path, {"version": 1, "details": policy.state,
-                                             "lists": {**checks.get("lists", {}), **policy.listed_at}})
-                results.extend(collected)
-                for result in collected:
-                    if result.error:
-                        issues.append(f"{category}:{result.course_id}:{result.error}")
-                if any(result.error in ("auth_login_required", "auth_unknown") for result in collected):
-                    break
-            except AuthenticationError as error:
-                issues.append("auth_" + error.status.value)
-                break
-            except FileNotFoundError:
-                issues.append("auth_login_required")
-                break
-            except PopupBlocked:
-                issues.append(f"{category}:popup_blocked")
-                break
-            except Exception:
-                # Fixed category only: browser errors may expose cookies/URLs.
-                issues.append(f"{category}:operation_failed")
-            time.sleep(1)
+        metrics = Metrics()
+        category = "setup"
+        try:
+            with closing(collect_cycle(data / "auth/storage_state.json", browser, policy, metrics)) as stream:
+                for category, collected in stream:
+                    database.process_results(collected)
+                    if category in ("notices", "materials"):
+                        policy.committed(collected)
+                        atomic_json(policy_path, {"version": 1, "details": policy.state,
+                                                 "lists": {**checks.get("lists", {}), **policy.listed_at}})
+                    results.extend(collected)
+                    for result in collected:
+                        if result.error:
+                            issues.append(f"{category}:{result.course_id}:{result.error}")
+        except AuthenticationError as error:
+            issues.append("auth_" + error.status.value)
+        except FileNotFoundError:
+            issues.append("auth_login_required")
+        except PopupBlocked:
+            issues.append(f"{category}:popup_blocked")
+        except Exception:
+            # Fixed category only: browser errors may expose cookies/URLs.
+            issues.append(f"{category}:operation_failed")
         now = datetime.now(timezone.utc).isoformat()
         # This adapter deliberately targets the reviewed SQLite v5 schema.
         state = project(database._connection, previous, results, issues, now, offset)
         atomic_json(state_path, state)
         atomic_json((public or data) / "snapshot.json", public_snapshot(state))
+        measurement = {**metrics.snapshot(), "finishedAt": now, "status": state["status"]}
+        atomic_json(data / "metrics.json", measurement)
+        print("LMS metrics: " + json.dumps(measurement, separators=(",", ":")), flush=True)
         print(f"LMS cycle: {state['status']}", flush=True)
 
 def main():

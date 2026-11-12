@@ -127,7 +127,7 @@ class BoardTests(unittest.TestCase):
         page, course, article = self.page()
         listing = BoardPage(1, (REF,), ())
         with patch("boards.parse_board_page", return_value=listing), patch("boards.read_listing", return_value=((REF,), {REF.article_id: "title"})):
-            result = collect_course(page, course, "N", lambda *_: ITEM, policy)
+            result = collect_course(page, course, "N", lambda *_: ITEM, policy, list_url="https://lms.dju.ac.kr/list", session=MagicMock())
         return result, article.click.call_count
 
     def test_unchanged_course_opens_no_detail(self):

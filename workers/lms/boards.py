@@ -5,22 +5,29 @@ remains mandatory; list completeness does not mean all bodies were refreshed.
 """
 from datetime import datetime, timezone
 from hashlib import sha256
+from session import wait_for_link
 from html.parser import HTMLParser
-from urllib.parse import urljoin, urlsplit, parse_qs
 
 from dju_lms_notifier.lms.notices import (
-    NoticeReadError, checked, list_response, move_list_page, collect_isolated,
-    CourseNoticeResult,
+    NoticeReadError, checked, list_response,
 )
-from dju_lms_notifier.lms.materials import CourseMaterialResult
-from dju_lms_notifier.lms.enrollment import matches, discover_enrollment_from_page
-from dju_lms_notifier.lms.auth import launch_browser, navigate_main, probe_auth
-from dju_lms_notifier.lms.state import read_state
 from dju_lms_notifier.parsers.notices import (
-    CALL, IncompleteNoticeList, parse_board_page, merge_board_pages, parse_notice_detail,
+    CALL, IncompleteNoticeList, parse_board_page, merge_board_pages,
 )
-from dju_lms_notifier.parsers.materials import parse_material_detail
-from playwright.sync_api import sync_playwright
+
+
+def move_page(page, board_id, number, session):
+    link = page.locator(f'a[href="javascript:listPaging({number})"]')
+    link.wait_for(state="attached", timeout=10000)
+    if link.count() != 1:
+        raise IncompleteNoticeList("Required page link is unavailable.")
+    session.before_request()
+    with page.expect_response(lambda r: list_response(r, board_id, number), timeout=30000) as pending:
+        link.click()
+    result = parse_board_page(checked(pending.value).text(), board_id)
+    if any(ref.page != str(number) for ref in result.refs):
+        raise IncompleteNoticeList("Unexpected page response.")
+    return result
 
 
 class Titles(HTMLParser):
@@ -51,7 +58,7 @@ class Titles(HTMLParser):
             self.active = None
 
 
-def read_listing(page, first, board_id, first_html):
+def read_listing(page, first, board_id, first_html, session):
     pages, signatures = [first], {}
     def capture(current, html):
         parser = Titles()
@@ -67,9 +74,10 @@ def read_listing(page, first, board_id, first_html):
         if number > 100 or number not in pages[-1].pages:
             raise IncompleteNoticeList("Unverified pagination or traversal limit.")
         link = page.locator(f'a[href="javascript:listPaging({number})"]')
+        link.wait_for(state="attached", timeout=10000)
         if link.count() != 1:
             raise IncompleteNoticeList("Required page link is unavailable.")
-        page.wait_for_timeout(1000)
+        session.before_request()
         with page.expect_response(lambda r: list_response(r, board_id, number), timeout=30000) as pending:
             link.click()
         html = checked(pending.value).text()
@@ -129,37 +137,16 @@ class BoardPolicy:
                 self.state[key] = {"signature": signature, "detailCheckedAt": self.now.isoformat()}
 
 
-def collect_course(page, course, board_kind, detail_parser, policy):
+def collect_course(page, course, board_kind, detail_parser, policy, *, list_url, session):
     if board_kind not in {"N", "P"}:
         raise NoticeReadError("Unsupported board kind.")
-    page.wait_for_timeout(1000)
-    handler = f"classRoomMain('{course.course_id}', '{course.course_type}')"
-    candidates = [n for n in page.locator('div.item[onclick]').all() if n.get_attribute("onclick") == handler]
-    if len(candidates) != 1:
-        raise NoticeReadError("Course menu unavailable.")
-    target = candidates[0]
-    with page.expect_response(lambda r: matches(r, "/bbs/bbsLect/menuBbsInfoList") and
-                              parse_qs(r.request.post_data or "").get("crsCreCd") == [course.course_id], timeout=30000) as menu:
-        target.locator("xpath=../..").click()
-        target.click()
-    checked(menu.value)
-    page.locator('a[href*="atclListForm"]').first.wait_for(state="attached", timeout=10000)
     board_id = f"BBS_{course.course_id}_{board_kind}"
-    urls = set()
-    for anchor in page.locator('a[href*="atclListForm"]').all():
-        url = urljoin("https://lms.dju.ac.kr", anchor.get_attribute("href"))
-        parts = urlsplit(url)
-        fields = parse_qs(parts.query)
-        if (parts.scheme == "https" and parts.netloc == "lms.dju.ac.kr" and parts.path == "/bbs/bbsLect/Form/atclListForm"
-                and fields.get("bbsId") == [board_id] and fields.get("crsCreCd") == [course.course_id] and "mcd" in fields):
-            urls.add(url)
-    if len(urls) != 1:
-        raise NoticeReadError("Notice board menu unavailable or ambiguous.")
+    session.before_request()
     with page.expect_response(lambda r: list_response(r, board_id, 1), timeout=30000) as listing:
-        checked(page.goto(urls.pop(), wait_until="domcontentloaded", timeout=30000))
+        checked(page.goto(list_url, wait_until="domcontentloaded", timeout=30000))
     first_html = checked(listing.value).text()
     first = parse_board_page(first_html, board_id)
-    refs, signatures = read_listing(page, first, board_id, first_html)
+    refs, signatures = read_listing(page, first, board_id, first_html, session)
     policy.listed(board_id, refs)
     # Capture only links actually emitted by this list. Never build detail URLs.
     notices = []
@@ -172,8 +159,8 @@ def collect_course(page, course, board_kind, detail_parser, policy):
             continue
         if not policy.due(ref, signature):
             continue
-        page.wait_for_timeout(1000)
         if index or first.total > len(first.refs):
+            session.before_request()
             with page.expect_response(lambda r: list_response(r, board_id, 1), timeout=30000) as restored:
                 checked(page.goto(list_url, wait_until="domcontentloaded", timeout=30000))
             current = parse_board_page(checked(restored.value).text(), board_id)
@@ -182,12 +169,15 @@ def collect_course(page, course, board_kind, detail_parser, policy):
             for number in range(2, int(ref.page) + 1):
                 if number not in current.pages:
                     raise IncompleteNoticeList("Article page is unavailable.")
-                current = move_list_page(page, board_id, number)
+                current = move_page(page, board_id, number, session)
                 if current.total != first.total:
                     raise IncompleteNoticeList("Board changed while reading details.")
+        wait_for_link(page, ref.href)
         anchors = [n for n in page.locator('a[href*="viewAtcl("]').all() if n.get_attribute("href") == ref.href]
         if len(anchors) != 1:
             raise NoticeReadError("Notice list changed during collection.")
+        session.before_request()
+        session.detail_attempt()
         with page.expect_navigation(wait_until="domcontentloaded", timeout=30000) as detail:
             anchors[0].click()
         checked(detail.value)
@@ -196,21 +186,3 @@ def collect_course(page, course, board_kind, detail_parser, policy):
         policy.remember(ref, signature, item)
         notices.append(item)
     return tuple(notices)
-
-
-
-def collect_boards(path, channel, category, policy):
-    kind, parser, result_type = (("N", parse_notice_detail, CourseNoticeResult)
-        if category == "notices" else ("P", parse_material_detail, CourseMaterialResult))
-    with sync_playwright() as playwright:
-        browser = launch_browser(playwright, channel, headed=False)
-        try:
-            context = browser.new_context(storage_state=read_state(path), accept_downloads=False)
-            page = context.new_page()
-            snapshot = discover_enrollment_from_page(page)
-            return collect_isolated(snapshot.courses,
-                lambda course: collect_course(page, course, kind, parser, policy),
-                page.wait_for_timeout, lambda: navigate_main(page),
-                check_auth=lambda: probe_auth(page), result_type=result_type)
-        finally:
-            browser.close()
