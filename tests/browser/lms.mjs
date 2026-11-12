@@ -211,6 +211,17 @@ try {
     assert.ok(outgoing.iconLeft >= outgoing.contentRight, `System icon on right at ${width}`);
     assert.ok(Math.abs(outgoing.iconRight - outgoing.right) < 1, `System aligned right at ${width}`);
     assert.ok(incoming.iconRight <= incoming.contentLeft, `News stays left at ${width}`);
+    const newsBubble = news.locator('header').locator('..');
+    const collapsedWidth = (await newsBubble.boundingBox()).width;
+    if (width === 1440) assert.ok(collapsedWidth < 400, 'Short news must not fill the feed');
+    await news.locator('details p').evaluate((element) => {
+      element.textContent = '긴본문확인'.repeat(100);
+    });
+    await news.locator('summary').click();
+    assert.ok((await newsBubble.boundingBox()).width >= collapsedWidth);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Expanded body overflow at ${width}`);
+    await news.locator('summary').click();
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.screenshot({ path: `work/qa/lms-sticky-${width}.png` });
     await page.getByRole('navigation', { name: 'LMS 보기' }).getByRole('link', { name: '남은 과제' }).click();
