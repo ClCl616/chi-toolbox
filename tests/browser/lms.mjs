@@ -189,6 +189,35 @@ try {
     );
     await header.getByText('읽음', { exact: true }).waitFor();
   }
+  const verifyFeedLayout = async (width) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(`${base}/v2/lms`);
+    await page.getByRole('heading', { name: 'LMS 수집이 복구됐어요', exact: true }).waitFor();
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForFunction(() => {
+      const tabs = document.querySelector('nav[aria-label="LMS 보기"]');
+      return Math.abs(tabs.getBoundingClientRect().top) < 1;
+    });
+    const recovery = page.getByRole('article').filter({ hasText: 'LMS 수집이 복구됐어요' });
+    const news = page.getByRole('article').filter({ hasText: '테스트 소식 16' });
+    const geometry = async (article) => article.evaluate((element) => {
+      const row = element.getBoundingClientRect();
+      const icon = element.firstElementChild.getBoundingClientRect();
+      const content = element.lastElementChild.getBoundingClientRect();
+      return { left: row.left, right: row.right, iconLeft: icon.left, iconRight: icon.right, contentLeft: content.left, contentRight: content.right };
+    });
+    const outgoing = await geometry(recovery);
+    const incoming = await geometry(news);
+    assert.ok(outgoing.iconLeft >= outgoing.contentRight, `System icon on right at ${width}`);
+    assert.ok(Math.abs(outgoing.iconRight - outgoing.right) < 1, `System aligned right at ${width}`);
+    assert.ok(incoming.iconRight <= incoming.contentLeft, `News stays left at ${width}`);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await page.screenshot({ path: `work/qa/lms-sticky-${width}.png` });
+    await page.getByRole('navigation', { name: 'LMS 보기' }).getByRole('link', { name: '남은 과제' }).click();
+    await page.waitForURL(`${base}/v2/lms/assignments`);
+  };
+  for (const width of [1440, 390, 320]) await verifyFeedLayout(width);
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${base}/v2/dashboard`);
   await page.getByRole('link', { name: '새 소식 · 0', exact: true }).waitFor();
   assert.equal(await page.getByText(/상태 알림/).count(), 0);

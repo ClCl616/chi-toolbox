@@ -35,6 +35,8 @@ export function LmsFeed() {
       positioned.current = true;
     }
     const timers = new Map<Element, number>();
+    const tabs = container.closest('main')?.querySelector('[aria-label="LMS 보기"]');
+    const tabsHeight = Math.ceil(tabs?.getBoundingClientRect().height ?? 0);
     const cancel = (node: Element) => {
       clearTimeout(timers.get(node));
       timers.delete(node);
@@ -60,7 +62,7 @@ export function LmsFeed() {
           }
         }
       },
-      { threshold: [0, 0.8, 1], rootMargin: '0px 0px -85px 0px' },
+      { threshold: [0, 0.8, 1], rootMargin: `-${tabsHeight}px 0px -85px 0px` },
     );
     const frame = requestAnimationFrame(() =>
       nodes.forEach((node) => observer.observe(node)),
