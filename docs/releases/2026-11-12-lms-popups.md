@@ -24,3 +24,9 @@ git diff --check
 이 변경은 웹 앱과 별도 Discord 수집기의 배포가 아니다. `CHI-TOOLBOX-LMS`가 실행 중이면 끝날 때까지 기다린다. 기존 활성 상태를 기록한 후 작업만 잠시 비활성화하고 worker 파일을 백업한다. `workers/lms/{worker,projector,boards,popups}.py` 네 파일을 전용 `C:/Services/chi-toolbox-lms/worker`로 함께 전달한다. 설치 스크립트에도 popups.py를 추가했다.
 
 서버의 실제 Python/Notifier source로 오프라인 테스트·파일 해시·import를 확인한 후 기존 작업 활성 상태를 복원한다. private/public 데이터·환경 파일·세션은 보존한다. 수집을 강제 실행하지 않는다. 실패하면 백업 worker 파일을 복원하고 원래 작업 상태로 되돌린다. GitHub push는 수행하지 않는다.
+
+## 적용 결과
+
+- 구현 커밋 `8c19e37`. 2026-11-12 11:48 KST에 Windows 수집기 적용 완료. 서버 Python21개, 네 파일 해시, 설치 위치의 import/schema v5 및 공통 탐색 함수 연결 검사 통과.
+- 이전 worker 파일 백업: `C:/Services/chi-toolbox-lms/backups/popups-20261112-114843`. 작업은 기존 주기가 끝난 뒤 교체했으며 Ready/Enabled로 복원했다. 다음 예정 실행은 같은 날 12:14 KST다.
+- 전체 수집 성공·snapshot 최신화는 다음 예약 실행에서 확인 필요. 웹 앱·Discord·운영 데이터·origin은 변경하지 않았다. 기존 문서 재구성 변경은 커밋에서 제외했다.
