@@ -10,6 +10,7 @@ import tempfile
 import time
 
 from projector import project, public_snapshot
+from popups import PopupBlocked, install as install_popup_handling
 
 def atomic_json(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -58,6 +59,9 @@ def cycle(data, browser, offset, public=None):
             except FileNotFoundError:
                 issues.append("auth_login_required")
                 break
+            except PopupBlocked:
+                issues.append(f"{category}:popup_blocked")
+                break
             except Exception:
                 # Fixed category only: browser errors may expose cookies/URLs.
                 issues.append(f"{category}:operation_failed")
@@ -88,6 +92,7 @@ def main():
     if public == source or source in public.parents:
         raise SystemExit("Use a separate snapshot directory.")
     sys.path.insert(0, str(source / "src"))
+    install_popup_handling()
     from dju_lms_notifier.runner import cycle_lock, AlreadyRunning
     from dju_lms_notifier.lms.auth import manual_login
     from dju_lms_notifier.storage.database import VERSION
