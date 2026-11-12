@@ -199,7 +199,7 @@ try {
       return Math.abs(tabs.getBoundingClientRect().top) < 1;
     });
     const recovery = page.getByRole('article').filter({ hasText: 'LMS 수집이 복구됐어요' });
-    const news = page.getByRole('article').filter({ hasText: '테스트 소식 16' });
+    const news = page.locator('[data-read-id="event:16"]').locator('xpath=ancestor::article');
     const geometry = async (article) => article.evaluate((element) => {
       const row = element.getBoundingClientRect();
       const icon = element.firstElementChild.getBoundingClientRect();
@@ -214,6 +214,18 @@ try {
     const newsBubble = news.locator('header').locator('..');
     const collapsedWidth = (await newsBubble.boundingBox()).width;
     if (width === 1440) assert.ok(collapsedWidth < 400, 'Short news must not fill the feed');
+    if (width >= 390) assert.ok(collapsedWidth >= 240, 'Short messages keep a minimum width');
+    // A long course label and short title must share the bubble's boundaries.
+    await news.locator('header h2').evaluate((element) => { element.textContent = '4'; });
+    await news.locator('p').first().evaluate((element) => {
+      element.textContent = '학교폭력예방및학생의이해 · 과제 · 변경';
+    });
+    const bounds = await newsBubble.boundingBox();
+    for (const label of [news.locator('p').first(), news.locator('time')]) {
+      const box = await label.boundingBox();
+      assert.ok(box.x >= bounds.x && box.x + box.width <= bounds.x + bounds.width + 1,
+        `Metadata/time must stay within bubble width at ${width}`);
+    }
     await news.locator('details p').evaluate((element) => {
       element.textContent = '긴본문확인'.repeat(100);
     });

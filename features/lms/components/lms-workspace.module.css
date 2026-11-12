@@ -110,14 +110,14 @@
 .messageContent {
   flex: 0 1 auto;
   width: fit-content;
-  min-width: 0;
-  max-width: 800px;
+  min-width: min(240px, calc(100% - 62px));
+  max-width: min(800px, calc(100% - 62px));
 }
 .messageContent > .meta {
   margin: 0 8px 8px;
 }
 .bubble {
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
   background: #fff;
   border: 1px solid var(--tb-border);
@@ -400,6 +400,10 @@
   .message,
   .systemMessage {
     gap: 10px;
+  }
+  .messageContent {
+    min-width: min(240px, calc(100% - 48px));
+    max-width: min(800px, calc(100% - 48px));
   }
   .bubble {
     padding: 16px;
