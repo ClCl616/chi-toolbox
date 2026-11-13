@@ -67,6 +67,14 @@ def cycle(data, browser, offset, public=None):
         atomic_json((public or data) / "snapshot.json", public_snapshot(state))
         measurement = {**metrics.snapshot(), "finishedAt": now, "status": state["status"]}
         atomic_json(data / "metrics.json", measurement)
+        history_path = data / "diagnostics-history.json"
+        try:
+            history = json.loads(history_path.read_text(encoding="utf-8")) if history_path.exists() else []
+            if not isinstance(history, list):
+                history = []
+        except (ValueError, OSError):
+            history = []
+        atomic_json(history_path, (history + [measurement])[-100:])
         print("LMS metrics: " + json.dumps(measurement, separators=(",", ":")), flush=True)
         print(f"LMS cycle: {state['status']}", flush=True)
 

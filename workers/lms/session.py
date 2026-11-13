@@ -1,6 +1,8 @@
 """One sequential browser session; no URLs or course identifiers in metrics."""
 from contextlib import contextmanager
 import time
+import traceback
+from pathlib import Path
 from urllib.parse import parse_qs, urljoin, urlsplit
 
 from playwright.sync_api import sync_playwright
@@ -54,6 +56,39 @@ class Metrics:
                               "results": 0, "failures": 0}
                        for name in ("setup", *CATEGORIES)}
         self.course_entries = 0
+        self.diagnostics = []
+        self.http_errors = {}
+        self.scope_index = 0
+
+    def response(self, response):
+        if urlsplit(response.url).netloc == "lms.dju.ac.kr" and 400 <= response.status <= 599:
+            key = str(response.status)
+            self.http_errors[key] = self.http_errors.get(key, 0) + 1
+
+    @contextmanager
+    def diagnose(self, stage):
+        start = time.monotonic()
+        before = dict(self.http_errors)
+        try:
+            yield
+        except Exception as error:
+            # Never serialize exception messages, source lines, locals or URLs.
+            from playwright.sync_api import TimeoutError as BrowserTimeout
+            from dju_lms_notifier.lms.notices import TemporaryReadError
+            kind = ("timeout" if isinstance(error, BrowserTimeout) else
+                    "http_5xx" if isinstance(error, TemporaryReadError) else "other")
+            allowed = {"session.py", "collection.py", "activities.py", "boards.py", "popups.py",
+                       "notices.py", "assignments.py", "exams.py", "lessons.py", "auth.py", "enrollment.py"}
+            frames = [{"file": Path(frame.filename).name, "line": frame.lineno}
+                      for frame in traceback.extract_tb(error.__traceback__)
+                      if Path(frame.filename).name in allowed]
+            self.diagnostics.append({"stage": stage, "category": self.active,
+                "scopeIndex": self.scope_index, "kind": kind,
+                "seconds": round(time.monotonic() - start, 3), "frames": frames[-8:],
+                "httpStatuses": {key: value - before.get(key, 0) for key, value in self.http_errors.items()
+                                 if value > before.get(key, 0)}})
+            self.diagnostics = self.diagnostics[-100:]
+            raise
 
     def request(self, request):
         # Resource bodies, URL strings, account data and course names are not saved.
@@ -78,6 +113,7 @@ class Metrics:
 
     def snapshot(self):
         return {"version": 1, "totalSeconds": round(time.monotonic() - self.started, 3),
+                "diagnostics": self.diagnostics, "httpStatuses": self.http_errors,
                 "courseEntries": self.course_entries,
                 "categories": {name: {**value, "seconds": round(value["seconds"], 3)}
                                for name, value in self.values.items()}}
@@ -105,8 +141,9 @@ class Session:
 
     def recover(self):
         self.course_id, self.urls = None, {}
-        self.before_request()
-        navigate_main(self.page)
+        with self.metrics.diagnose("recovery"):
+            self.before_request()
+            navigate_main(self.page)
 
     def menu(self, course, category):
         if self.course_id != course.course_id:
@@ -145,8 +182,9 @@ def open_session(path, channel, metrics):
             context = browser.new_context(storage_state=state, accept_downloads=False)
             context.route("**/*", lambda route: route.abort() if route.request.resource_type == "media" else route.continue_())
             context.on("request", metrics.request)
+            context.on("response", metrics.response)
             page = context.new_page()
-            with metrics.measure("setup"):
+            with metrics.measure("setup"), metrics.diagnose("setup"):
                 snapshot = discover_enrollment_from_page(page)
             yield Session(page, metrics), snapshot.courses
         finally:

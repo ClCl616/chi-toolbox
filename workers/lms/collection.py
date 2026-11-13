@@ -17,6 +17,11 @@ ACTIVITIES = {"assignments": collect_assignments, "exams": collect_exams, "lesso
 
 
 def collect_scope(session, course, category, policy):
+    with session.metrics.diagnose("collect"):
+        return collect_scope_impl(session, course, category, policy)
+
+
+def collect_scope_impl(session, course, category, policy):
     url = session.menu(course, category)
     if category in ("notices", "materials"):
         kind, parser = ("N", parse_notice_detail) if category == "notices" else ("P", parse_material_detail)
@@ -28,6 +33,7 @@ def collect_cycle(path, channel, policy, metrics):
     with open_session(path, channel, metrics) as (session, courses):
         for course in courses:
             for category in CATEGORIES:
+                metrics.scope_index += 1
                 with metrics.measure(category):
                     result, = collect_isolated((course,),
                         lambda current: collect_scope(session, current, category, policy),

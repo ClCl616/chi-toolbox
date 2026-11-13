@@ -169,6 +169,11 @@ class WorkerTests(unittest.TestCase):
             self.assertEqual(checks['details']['BBS_SYNTH_N:one']['signature'], 'fingerprint')
             self.assertTrue((data / 'metrics.json').exists())
             self.assertFalse((public / 'metrics.json').exists())
+            self.assertFalse((public / 'diagnostics-history.json').exists())
+            history = json.loads((data / 'diagnostics-history.json').read_text(encoding='utf-8'))
+            self.assertEqual(len(history), 1)
+            self.assertNotIn('SYNTH', json.dumps(history))
+            (data / 'diagnostics-history.json').write_text(json.dumps(history * 100), encoding='utf-8')
             with patch('collection.collect_cycle', return_value=(row for row in [('notices', [CourseNoticeResult('SYNTH', ())])])):
                 cycle(data, 'msedge', 540, public)
             with Database(data / 'notifier.sqlite3') as database:
@@ -176,6 +181,9 @@ class WorkerTests(unittest.TestCase):
             snapshot = json.loads((public / 'snapshot.json').read_text(encoding='utf-8'))
             self.assertEqual(snapshot['status'], 'healthy')
             self.assertNotIn('metrics', snapshot)
+            history = json.loads((data / 'diagnostics-history.json').read_text(encoding='utf-8'))
+            self.assertEqual(len(history), 100)
+            self.assertEqual(history[-1]['finishedAt'], snapshot['lastAttempt'])
 
     def test_partial_failure_publishes_committed_result_and_closes_generator(self):
         from worker import cycle
