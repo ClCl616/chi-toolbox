@@ -5,8 +5,8 @@ import traceback
 from pathlib import Path
 from urllib.parse import parse_qs, urljoin, urlsplit
 
-from playwright.sync_api import sync_playwright
-from dju_lms_notifier.lms.auth import launch_browser, navigate_main
+from playwright.sync_api import sync_playwright, Error as BrowserError
+from dju_lms_notifier.lms.auth import launch_browser, navigate_main, ensure_authenticated, settle_auth
 from dju_lms_notifier.lms.enrollment import discover_enrollment_from_page, matches
 from dju_lms_notifier.lms.notices import checked, NoticeReadError
 from dju_lms_notifier.lms.state import read_state
@@ -48,6 +48,70 @@ def menu_urls(hrefs, course_id):
     return {category: next(iter(urls)) for category, urls in found.items() if len(urls) == 1}
 
 
+class PageTrace:
+    """Bounded event metadata only: never retain bodies, URLs or dialog text."""
+    def __init__(self, page, metrics):
+        self.page, self.metrics = page, metrics
+        self.events = []
+        self.pending = {}
+        page.on("request", self.request)
+        page.on("response", self.response)
+        page.on("requestfinished", self.finished)
+        page.on("requestfailed", self.failed)
+        page.on("framenavigated", self.committed)
+        page.on("domcontentloaded", lambda: self.event("dom_ready"))
+        page.on("crash", lambda: self.event("page_crash"))
+        page.on("dialog", self.dialog)
+
+    def event(self, name, **fields):
+        self.events.append({"event": name, "seconds": round(time.monotonic() - self.metrics.started, 3),
+                            "scopeIndex": self.metrics.scope_index, **fields})
+        self.events = self.events[-30:]
+
+    def request(self, request):
+        if len(self.pending) < 256:
+            kind = request.resource_type
+            kind = kind if kind in {"document", "script", "stylesheet", "image", "xhr", "fetch", "media"} else "other"
+            origin = "lms" if urlsplit(request.url).netloc == "lms.dju.ac.kr" else "external"
+            self.pending[request] = (kind + ":" + origin, time.monotonic())
+        if request.is_navigation_request() and request.frame == self.page.main_frame:
+            self.event("document_request")
+
+    def response(self, response):
+        request = response.request
+        if request.is_navigation_request() and request.frame == self.page.main_frame:
+            self.event("document_response", status=response.status)
+
+    def finished(self, request):
+        self.pending.pop(request, None)
+
+    def failed(self, request):
+        self.pending.pop(request, None)
+        # Network failure strings are only mapped to a closed vocabulary.
+        failure = request.failure
+        known = {"net::ERR_ABORTED": "aborted", "net::ERR_TIMED_OUT": "timed_out",
+                 "net::ERR_CONNECTION_RESET": "connection_reset", "net::ERR_NAME_NOT_RESOLVED": "dns"}
+        self.event("request_failed", reason=known.get(failure, "other"))
+
+    def committed(self, frame):
+        if frame == self.page.main_frame:
+            self.event("document_committed")
+
+    def dialog(self, dialog):
+        kind = dialog.type if dialog.type in {"alert", "confirm", "prompt", "beforeunload"} else "other"
+        self.event("dialog", kind=kind)
+        # Preserve Playwright's default policy while diagnosing navigation.
+        dialog.dismiss()
+
+    def snapshot(self):
+        pending = {}
+        for kind, started in self.pending.values():
+            value = pending.setdefault(kind, {"count": 0, "oldestSeconds": 0})
+            value["count"] += 1
+            value["oldestSeconds"] = max(value["oldestSeconds"], round(time.monotonic() - started, 3))
+        return {"events": list(self.events), "pending": pending}
+
+
 class Metrics:
     def __init__(self):
         self.started = time.monotonic()
@@ -59,6 +123,8 @@ class Metrics:
         self.diagnostics = []
         self.http_errors = {}
         self.scope_index = 0
+        self.page_trace = None
+        self.page_replacements = 0
 
     def response(self, response):
         if urlsplit(response.url).netloc == "lms.dju.ac.kr" and 400 <= response.status <= 599:
@@ -85,6 +151,7 @@ class Metrics:
             self.diagnostics.append({"stage": stage, "category": self.active,
                 "scopeIndex": self.scope_index, "kind": kind,
                 "seconds": round(time.monotonic() - start, 3), "frames": frames[-8:],
+                "navigation": self.page_trace.snapshot() if self.page_trace else None,
                 "httpStatuses": {key: value - before.get(key, 0) for key, value in self.http_errors.items()
                                  if value > before.get(key, 0)}})
             self.diagnostics = self.diagnostics[-100:]
@@ -114,6 +181,7 @@ class Metrics:
     def snapshot(self):
         return {"version": 1, "totalSeconds": round(time.monotonic() - self.started, 3),
                 "diagnostics": self.diagnostics, "httpStatuses": self.http_errors,
+                "pageReplacements": self.page_replacements,
                 "courseEntries": self.course_entries,
                 "categories": {name: {**value, "seconds": round(value["seconds"], 3)}
                                for name, value in self.values.items()}}
@@ -125,6 +193,8 @@ class Session:
         self.last_request = None
         self.course_id = None
         self.urls = {}
+        self.needs_recovery = False
+        self.metrics.page_trace = PageTrace(page, metrics)
 
     def before_request(self):
         # At least one second between navigation starts, including response time.
@@ -140,10 +210,29 @@ class Session:
         self.metrics.values[self.metrics.active]["details"] += 1
 
     def recover(self):
+        self.needs_recovery = True
         self.course_id, self.urls = None, {}
         with self.metrics.diagnose("recovery"):
+            old = self.page
+            context = old.context
+            # Discard the broken document, retaining only the current login context.
+            # The collector never edits forms; do not run beforeunload on disposal.
+            self.page = context.new_page()
+            self.metrics.page_replacements += 1
+            self.metrics.page_trace = PageTrace(self.page, self.metrics)
+            try:
+                old.close(run_before_unload=False)
+            except BrowserError:
+                pass
             self.before_request()
             navigate_main(self.page)
+            ensure_authenticated(settle_auth(self.page))
+            self.page.locator('div.item[onclick]').first.wait_for(state="attached", timeout=10000)
+            self.needs_recovery = False
+
+    def ensure_ready(self):
+        if self.needs_recovery:
+            self.recover()
 
     def menu(self, course, category):
         if self.course_id != course.course_id:
@@ -184,8 +273,9 @@ def open_session(path, channel, metrics):
             context.on("request", metrics.request)
             context.on("response", metrics.response)
             page = context.new_page()
+            session = Session(page, metrics)
             with metrics.measure("setup"), metrics.diagnose("setup"):
                 snapshot = discover_enrollment_from_page(page)
-            yield Session(page, metrics), snapshot.courses
+            yield session, snapshot.courses
         finally:
             browser.close()

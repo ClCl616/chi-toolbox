@@ -55,14 +55,48 @@ class SessionTests(unittest.TestCase):
         page.expect_response.return_value.__enter__.return_value.value.status = 200
         session = Session(page, Metrics())
         course = SimpleNamespace(course_id='A', course_type='UNI')
-        with patch.object(session, 'before_request'), patch('session.navigate_main') as navigate:
+        replacement = page.context.new_page.return_value
+        replacement.locator.return_value.all.return_value = [tile]
+        replacement.locator.return_value.evaluate_all.return_value = links('A')
+        replacement.expect_response.return_value.__enter__.return_value.value.status = 200
+        with patch.object(session, 'before_request'), patch('session.navigate_main') as navigate, \
+                patch('session.settle_auth', return_value=AuthStatus.AUTHENTICATED):
             for category in CATEGORIES:
                 self.assertEqual(session.menu(course, category), links('A')[CATEGORIES.index(category)])
             self.assertEqual(tile.click.call_count, 1)
             session.recover()
             session.menu(course, 'exams')
             self.assertEqual(tile.click.call_count, 2)
-            navigate.assert_called_once_with(page)
+            navigate.assert_called_once_with(replacement)
+            page.close.assert_called_once_with(run_before_unload=False)
+            self.assertIs(session.page, replacement)
+
+    def test_failed_recovery_is_discarded_before_next_scope(self):
+        from playwright.sync_api import TimeoutError as BrowserTimeout
+        original, failed, fresh = MagicMock(), MagicMock(), MagicMock()
+        context = original.context
+        failed.context = context
+        context.new_page.side_effect = [failed, fresh]
+        session = Session(original, Metrics())
+        with patch.object(session, 'before_request'), \
+                patch('session.navigate_main', side_effect=[BrowserTimeout('secret'), None]), \
+                patch('session.settle_auth', return_value=AuthStatus.AUTHENTICATED), \
+                patch('collection.collect_scope_impl', return_value=()) as collect:
+            with self.assertRaises(BrowserTimeout):
+                session.recover()
+            self.assertTrue(session.needs_recovery)
+            self.assertEqual(collection.collect_scope(session, object(), 'exams', object()), ())
+            self.assertIs(session.page, fresh)
+            self.assertFalse(session.needs_recovery)
+            failed.close.assert_called_once_with(run_before_unload=False)
+            collect.assert_called_once()
+
+    def test_failed_collect_marks_page_unusable(self):
+        session = Session(MagicMock(), Metrics())
+        with patch('collection.collect_scope_impl', side_effect=NoticeReadError('secret')):
+            with self.assertRaises(NoticeReadError):
+                collection.collect_scope(session, object(), 'assignments', object())
+        self.assertTrue(session.needs_recovery)
 
     def test_browser_and_enrollment_created_once_and_closed_on_failure(self):
         metrics = Metrics()

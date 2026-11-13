@@ -17,8 +17,13 @@ ACTIVITIES = {"assignments": collect_assignments, "exams": collect_exams, "lesso
 
 
 def collect_scope(session, course, category, policy):
-    with session.metrics.diagnose("collect"):
-        return collect_scope_impl(session, course, category, policy)
+    session.ensure_ready()
+    try:
+        with session.metrics.diagnose("collect"):
+            return collect_scope_impl(session, course, category, policy)
+    except Exception:
+        session.needs_recovery = True
+        raise
 
 
 def collect_scope_impl(session, course, category, policy):
@@ -37,7 +42,7 @@ def collect_cycle(path, channel, policy, metrics):
                 with metrics.measure(category):
                     result, = collect_isolated((course,),
                         lambda current: collect_scope(session, current, category, policy),
-                        session.page.wait_for_timeout, session.recover,
+                        lambda ms: session.page.wait_for_timeout(ms), session.recover,
                         check_auth=lambda: probe_auth(session.page), result_type=RESULTS[category])
                 metrics.result(category, result)
                 yield category, [result]
