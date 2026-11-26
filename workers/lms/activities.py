@@ -14,8 +14,15 @@ def collect_assignments(page, course, list_url, session):
     refs = read_list()
     items = []
     for index, ref in enumerate(refs):
-        if index and read_list() != refs:
-            raise IncompleteNoticeList("Assignment list changed during collection.")
+        if index:
+            # Returning from an assignment detail can stall even after HTTP 200.
+            # Discard that document before navigating; retain the login context
+            # and verify the observed course menu and list again.
+            session.recover()
+            page = session.page
+            list_url = session.menu(course, "assignments")
+            if read_list() != refs:
+                raise IncompleteNoticeList("Assignment list changed during collection.")
         wait_for_link(page, ref.href)
         links = [n for n in page.locator('a[href*="asmntView("]').all() if n.get_attribute("href") == ref.href]
         if len(links) != 1:

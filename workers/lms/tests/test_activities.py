@@ -15,6 +15,7 @@ from dju_lms_notifier.lms.auth import AuthStatus
 from activities import collect_assignments, collect_exams, collect_lessons
 from dju_lms_notifier.lms import assignments, exams, lessons
 from session import Session, Metrics, PageTrace
+from dju_lms_notifier.parsers.notices import IncompleteNoticeList
 
 FIXTURES = Path(__file__).parent / 'fixtures'
 BASE = 'https://lms.dju.ac.kr'
@@ -81,6 +82,63 @@ class ActivityBrowserTests(unittest.TestCase):
         self.verify('exams', exams, collect_exams,
             'crsCreCd=COURSE_SYNTH&pageIndex=1&listScale=1000&examTypeCd=OFF&examSubmitYn=Y&useYn=Y&searchValue=',
             'exam_cards.html', '/exam/examLect/Form/viewStuExamMain?examCd=EXAM_SYNTH_1&crsCreCd=COURSE_SYNTH&tabCd=0', 'examView')
+
+    def verify_assignment_return(self, changed=False):
+        context = self.browser.new_context()
+        self.addCleanup(context.close)
+        page = context.new_page()
+        session = Session(page, Metrics())
+        original = (FIXTURES / 'assignment_cards.html').read_text(encoding='utf-8')
+        end = original.rindex('</div></div>') + 6
+        card = original[original.index('<div class="card">'):end]
+        listing = original[:end] + card.replace('ASMNT_SYNTH_1', 'ASMNT_SYNTH_2') + original[end:]
+        detail = (FIXTURES / 'assignment_detail.html').read_text(encoding='utf-8')
+        detail_pages = []
+        list_url = BASE + assignments.MENU_PATH
+
+        def respond(route):
+            path = urlsplit(route.request.url).path
+            if path == '/main':
+                route.fulfill(content_type='text/html', body='<div class="item" onclick=""></div>')
+            elif path == assignments.MENU_PATH:
+                self.assertNotIn(route.request.frame.page, detail_pages,
+                                 'Must not navigate back from the old detail document')
+                route.fulfill(content_type='text/html', body='''<div id="items"></div><script>
+                    window.asmntView=id=>location.href='/asmnt/asmntLect/Form/asmntStuMain?crsCreCd=COURSE_SYNTH&asmntCd='+id;
+                    fetch(''' + json.dumps(assignments.LIST_PATH) + ''', {method:'POST',
+                    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+                    body:'crsCreCd=COURSE_SYNTH&pageIndex=1&listScale=10'})
+                    .then(r=>r.text()).then(t=>document.getElementById('items').innerHTML=t);
+                    </script>''')
+            elif path == assignments.LIST_PATH:
+                route.fulfill(content_type='text/html; charset=utf-8', body=original if changed and detail_pages else listing)
+            elif path == '/asmnt/asmntLect/Form/asmntStuMain':
+                detail_pages.append(route.request.frame.page)
+                route.fulfill(content_type='text/html; charset=utf-8', body=detail.replace('ASMNT_SYNTH_1',
+                    'ASMNT_SYNTH_2' if 'ASMNT_SYNTH_2' in route.request.url else 'ASMNT_SYNTH_1'))
+            else:
+                self.fail('Unexpected synthetic request')
+
+        context.route('**/*', respond)
+        with patch('session.navigate_main', side_effect=lambda fresh: fresh.goto(BASE + '/main')), \
+                patch('session.settle_auth', return_value=AuthStatus.AUTHENTICATED), \
+                patch.object(session, 'menu', return_value=list_url):
+            if changed:
+                with self.assertRaises(IncompleteNoticeList):
+                    collect_assignments(page, COURSE, list_url, session)
+            else:
+                result = collect_assignments(page, COURSE, list_url, session)
+                self.assertEqual(len(result), 2)
+                self.assertEqual(len(detail_pages), 2)
+        self.assertTrue(page.is_closed())
+        self.assertIs(session.page.context, context)
+        self.assertEqual(session.metrics.page_replacements, 1)
+
+    def test_assignment_return_uses_fresh_document(self):
+        self.verify_assignment_return()
+
+    def test_assignment_return_rejects_changed_list(self):
+        self.verify_assignment_return(changed=True)
 
     def test_lesson_results_without_content_requests(self):
         self.verify('lessons', lessons, collect_lessons,
